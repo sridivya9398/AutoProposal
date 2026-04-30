@@ -1,7 +1,8 @@
 {
-  "name": "autoproposal",
-  "private": true,
-  "version": "0.0.0",
+  "name": "auto-proposal-agentic-graphrag",
+  "private": false,
+  "description": "An open-source AI platform for automated RFP responses using Multi-Agent workflows and GraphRAG technology.",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
