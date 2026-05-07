@@ -10,10 +10,34 @@ async function run() {
   // 1. Get Project Stats
   const srcDir = path.join(process.cwd(), 'src');
   const files = getAllFiles(srcDir);
-  const componentCount = files.filter(f => f.endsWith('.tsx') || f.endsWith('.jsx')).length;
-  const tsFileCount = files.filter(f => f.endsWith('.ts') || f.endsWith('.tsx')).length;
+  const componentFiles = files.filter(f => f.endsWith('.tsx') || f.endsWith('.jsx'));
+  const tsFiles = files.filter(f => f.endsWith('.ts') || f.endsWith('.tsx'));
+  
+  let totalLOC = 0;
+  let todos = [];
 
-  // 2. Daily Motivation/Tip
+  files.forEach(file => {
+    if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx') || file.endsWith('.css')) {
+      const content = fs.readFileSync(file, 'utf8');
+      const lines = content.split('\n');
+      totalLOC += lines.length;
+
+      // Scan for TODOs
+      lines.forEach((line, index) => {
+        if (line.includes('// TODO') || line.includes('// FIXME')) {
+          const relPath = path.relative(process.cwd(), file);
+          todos.push(`\`${relPath}:L${index + 1}\` - ${line.trim().replace('//', '').trim()}`);
+        }
+      });
+    }
+  });
+
+  // 2. Component of the Day
+  const randomComp = componentFiles.length > 0 
+    ? path.relative(process.cwd(), componentFiles[Math.floor(Math.random() * componentFiles.length)])
+    : 'No components found yet.';
+
+  // 3. Daily Motivation/Tip
   const tips = [
     "Clean code always looks like it was written by someone who cares.",
     "Refactor early, refactor often.",
@@ -28,16 +52,21 @@ async function run() {
   ];
   const tip = tips[Math.floor(Math.random() * tips.length)];
 
-  // 3. Construct the log entry
+  // 4. Construct the log entry
+  const todoSection = todos.length > 0 
+    ? `\n- **Unfinished Business (TODOs)**:\n  - ${todos.slice(0, 5).join('\n  - ')}${todos.length > 5 ? `\n  - *...and ${todos.length - 5} more*` : ''}`
+    : '\n- **Status**: No pending TODOs found! (Clean Slate) ✨';
+
   const entry = `
 ## ${dateStr} [${timeStr}]
 - **Project Pulse**: All systems operational.
-- **Stats**: ${componentCount} components, ${tsFileCount} TypeScript files.
-- **Daily Insight**: *"${tip}"*
+- **Growth**: ${totalLOC.toLocaleString()} total lines of code across ${tsFiles.length} TS files.
+- **Component of the Day**: \`${randomComp}\` (Give it some love today! 🛠️)
+- **Daily Insight**: *"${tip}"*${todoSection}
 ---
 `;
 
-  // 4. Update DAILY_LOG.md
+  // 5. Update DAILY_LOG.md
   let content = '';
   if (fs.existsSync(logFile)) {
     content = fs.readFileSync(logFile, 'utf8');
@@ -50,7 +79,7 @@ async function run() {
   const newContent = content.slice(0, headerEndIndex) + entry + content.slice(headerEndIndex);
 
   fs.writeFileSync(logFile, newContent);
-  console.log(`Updated daily log for ${dateStr}`);
+  console.log(`Updated daily log for ${dateStr} with enhanced metrics.`);
 }
 
 function getAllFiles(dirPath, arrayOfFiles) {
@@ -58,10 +87,13 @@ function getAllFiles(dirPath, arrayOfFiles) {
   arrayOfFiles = arrayOfFiles || [];
 
   files.forEach(function(file) {
-    if (fs.statSync(dirPath + "/" + file).isDirectory()) {
-      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles);
+    const fullPath = path.join(dirPath, file);
+    if (fs.statSync(fullPath).isDirectory()) {
+      if (file !== 'node_modules' && file !== '.git' && file !== 'dist') {
+        arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
+      }
     } else {
-      arrayOfFiles.push(path.join(dirPath, "/", file));
+      arrayOfFiles.push(fullPath);
     }
   });
 
