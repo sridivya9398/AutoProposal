@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Layers, FileText, Database, Settings as SettingsIcon, HelpCircle, Bot, LogOut, ChevronRight, Bell, Search } from 'lucide-react';
+import { Layers, FileText, Database, Settings as SettingsIcon, HelpCircle, Bot, LogOut, ChevronRight, Bell, Search, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import KnowledgeBase from './components/KnowledgeBase';
 import RFPWorkspace from './components/RFPWorkspace';
 import AgentTraces from './components/AgentTraces';
 import Settings from './components/Settings';
 import HelpSupport from './components/HelpSupport';
+import InnovationSandbox from './components/InnovationSandbox';
 
 function App() {
   const [activeTab, setActiveTab] = useState('workspace');
@@ -54,6 +55,14 @@ function App() {
             <span style={{ fontWeight: 600 }}>Agent Traces</span>
             {activeTab === 'traces' && <ChevronRight size={14} style={{ marginLeft: 'auto' }} />}
           </div>
+          <div 
+            className={`nav-item ${activeTab === 'innovation' ? 'active' : ''}`}
+            onClick={() => setActiveTab('innovation')}
+          >
+            <Sparkles size={20} />
+            <span style={{ fontWeight: 600 }}>Innovation Sandbox</span>
+            {activeTab === 'innovation' && <ChevronRight size={14} style={{ marginLeft: 'auto' }} />}
+          </div>
         </nav>
 
         <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginTop: '1rem' }}>
@@ -99,6 +108,7 @@ function App() {
               {activeTab === 'workspace' && 'RFP Workspace'}
               {activeTab === 'knowledge' && 'Corporate Brain'}
               {activeTab === 'traces' && 'System Traces'}
+              {activeTab === 'innovation' && 'Daily Sandbox'}
               {activeTab === 'settings' && 'System Preferences'}
               {activeTab === 'help' && 'Support Center'}
             </h2>
@@ -167,6 +177,7 @@ function App() {
               {activeTab === 'workspace' && <RFPWorkspace />}
               {activeTab === 'knowledge' && <KnowledgeBase />}
               {activeTab === 'traces' && <AgentTraces />}
+              {activeTab === 'innovation' && <InnovationSandbox />}
               {activeTab === 'settings' && <Settings />}
               {activeTab === 'help' && <HelpSupport />}
             </motion.div>
