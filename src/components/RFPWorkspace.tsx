@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Upload, Play, CheckCircle2, Clock, ShieldAlert, Cpu, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { Upload, CheckCircle2, Clock, ShieldAlert, Cpu, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const MOCK_QUESTIONS = [

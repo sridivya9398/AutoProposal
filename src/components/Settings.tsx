@@ -1,5 +1,4 @@
-import React from 'react';
-import { Settings as SettingsIcon, Shield, Database, Bell, Cpu, Lock, Globe } from 'lucide-react';
+import { Cpu, Lock, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Settings = () => {

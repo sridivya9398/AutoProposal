@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { UploadCloud, File, Search, Server, Network, Eye, MoreVertical, Trash2, Download } from 'lucide-react';
+import { useState } from 'react';
+import { UploadCloud, File, Search, Server, Network, Eye, MoreVertical, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const KnowledgeBase = () => {
@@ -70,7 +70,6 @@ const KnowledgeBase = () => {
         <button 
           onClick={() => setActiveView('docs')}
           style={{ 
-            background: 'none', 
             border: 'none', 
             color: activeView === 'docs' ? 'var(--primary-color)' : 'var(--text-secondary)',
             fontWeight: 700,
@@ -87,7 +86,6 @@ const KnowledgeBase = () => {
         <button 
           onClick={() => setActiveView('graph')}
           style={{ 
-            background: 'none', 
             border: 'none', 
             color: activeView === 'graph' ? 'var(--accent-color)' : 'var(--text-secondary)',
             fontWeight: 700,

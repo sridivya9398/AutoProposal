@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Layers, FileText, Database, Settings as SettingsIcon, HelpCircle, Bot, LogOut, ChevronRight, Bell, Search, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import KnowledgeBase from './components/KnowledgeBase';

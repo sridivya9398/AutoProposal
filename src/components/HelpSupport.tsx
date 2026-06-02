@@ -1,5 +1,4 @@
-import React from 'react';
-import { HelpCircle, Mail, BookOpen, MessageSquare } from 'lucide-react';
+import { Mail, BookOpen } from 'lucide-react';
 
 const HelpSupport = () => {
   return (

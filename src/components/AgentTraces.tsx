@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Terminal, Activity, GitCommit, Search, ArrowRight, Brain, Zap, ShieldCheck } from 'lucide-react';
+import { useState, Fragment } from 'react';
+import { Terminal, Activity, Search, ArrowRight, Brain, Zap, ShieldCheck, Network } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const TRACES = [
@@ -115,7 +115,7 @@ const AgentTraces = () => {
                 { label: 'Critic Review', icon: <ShieldCheck size={14} />, color: 'var(--success-color)' },
                 { label: 'Final Synthesis', icon: <Brain size={14} />, color: 'var(--primary-color)' }
               ].map((step, i) => (
-                <React.Fragment key={i}>
+                <Fragment key={i}>
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -141,7 +141,7 @@ const AgentTraces = () => {
                       <ArrowRight size={16} color="var(--border-color)" style={{ transform: 'rotate(90deg)' }} />
                     </div>
                   )}
-                </React.Fragment>
+                </Fragment>
               ))}
             </div>
           </div>

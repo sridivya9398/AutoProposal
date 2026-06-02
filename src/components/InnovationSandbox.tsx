@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Network, Cpu, Zap, Wifi, WifiOff, RefreshCw, Send, Play, Terminal, Code, Sparkles, ArrowRight, ShieldCheck, Database, Layers, Check } from 'lucide-react';
+import { Cpu, Wifi, WifiOff, Play, Terminal, Code, Sparkles, ShieldCheck, Database, Layers, Check, Crown, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TechProject {
@@ -17,8 +17,52 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'zk-inference',
+    date: 'June 03, 2026 (Today)',
+    title: 'zk-Inference Validator',
+    tagline: 'Zero-Knowledge Proof-of-Generation for Verifiable Edge LLM Output',
+    impactScore: 9.9,
+    techStack: ['Halo2 ZK-Prover', 'WASM Compilation', 'WebGPU Accelerators', 'BN254 Pairing Curve', 'RISC Zero'],
+    problemSolved: 'Outsourcing sensitive LLM inferences to untrusted client browsers or third-party edge nodes risks model substitution (using cheaper models) or output tampering. zk-Inference Validator generates cryptographic proofs proving that an LLM inference was executed correctly with a specific model and prompt.',
+    impactDescription: 'Enables verifiable trustless LLM compute marketplace. Requesting platforms can verify that a client node executed Llama-3-8B accurately on their prompt within milliseconds, enabling safe outsourcing of decentralized AI agent workflows.',
+    architecture: [
+      'LLM Execution Circuit ──> Step-by-step witness generation (WASM)',
+      'WebGPU Acceleration ──> Multi-Scalar Multiplication (MSM) & Number Theoretic Transform (NTT)',
+      'Halo2 Prover ──> Generate non-interactive cryptographic proof (340 bytes)',
+      'Consensus Verifier ──> Sub-millisecond validation of proof and output content authenticity'
+    ],
+    metrics: {
+      'Proof Generation Time': '1.2 seconds (WASM-Halo2)',
+      'Verification Speed': '0.4 ms (Smart Contract/Client)',
+      'Proof Size': '340 bytes',
+      'Trust Assurance': '100% Cryptographically Verified'
+    }
+  },
+  {
+    id: 'swarm-consensus',
+    date: 'June 02, 2026',
+    title: 'SwarmConsensus P2P',
+    tagline: 'Decentralized P2P Agent Swarm Byzantine Fault Tolerant (BFT) Task Allocation',
+    impactScore: 9.7,
+    techStack: ['WebRTC DataChannels', 'Byzantine Agreement', 'WASM-Raft Consensus', 'Local Secp256k1', 'Y.js Sync'],
+    problemSolved: 'Centralized LLM swarm coordinators are single points of failure, expose interaction logs, and cannot handle malicious/failed agent completions. SwarmConsensus allows edge agent nodes to agree on task splitting, verification, and output merging without a coordinator.',
+    impactDescription: 'Secures collaborative agent workflows across edge devices. If 2 nodes in a 5-node swarm go offline or return corrupted LLM completions, the consensus protocol detects the anomaly, rejects the corrupt agent trace, and redistributes the task dynamically.',
+    architecture: [
+      'Task Received ──> Raft Leader Node proposes assignment map',
+      'Follower Agent Nodes ──> Run local LLM task & create cryptographic state hash',
+      'WebRTC Gossip Network ──> Exchange state hashes and run BFT validation check',
+      'Consensus Approved Output ──> Commit to Y.js CRDT State Vector on all nodes'
+    ],
+    metrics: {
+      'Consensus Round-trip': '42 ms (WebRTC Gossip)',
+      'Byzantine Resiliency': 'Up to 33.3% malicious/failed agents tolerated',
+      'WASM State Verify Time': '0.8 ms per node',
+      'Bandwidth Consumption': '12 KB/sec average'
+    }
+  },
+  {
     id: 'synaptic-crdt',
-    date: 'June 01, 2026 (Today)',
+    date: 'June 01, 2026',
     title: 'Synaptic-CRDT',
     tagline: 'Local-First Collaborative Document Editor with Browser-Embedded LLMs',
     impactScore: 9.8,
@@ -83,8 +127,30 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('synaptic-crdt');
+  const [selectedProjectId, setSelectedProjectId] = useState('zk-inference');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // Swarm Consensus states
+  const [swarmTask, setSwarmTask] = useState('Draft SOC2 Compliance Audit Response');
+  const [swarmStatus, setSwarmStatus] = useState<'idle' | 'broadcasting' | 'inferring' | 'gossiping' | 'bft-check' | 'committed'>('idle');
+  const [swarmProgress, setSwarmProgress] = useState(0);
+  const [swarmLogs, setSwarmLogs] = useState<string[]>([
+    '[System] Swarm consensus engine initialized.',
+    '[System] Ready to broadcast task assignments to edge agent network.'
+  ]);
+  const [agents, setAgents] = useState([
+    { id: 'leader', name: 'Leader Agent', status: 'idle', icon: 'crown', detail: 'Coordinates Raft consensus' },
+    { id: 'agent-1', name: 'Agent-01 (US-East)', status: 'idle', icon: 'node', detail: 'Primary validation node' },
+    { id: 'agent-2', name: 'Agent-02 (EU-West)', status: 'idle', icon: 'node', detail: 'Secondary parser node' },
+    { id: 'agent-3', name: 'Agent-03 (APAC)', status: 'idle', icon: 'node', detail: 'Compliance checker node' },
+    { id: 'agent-4', name: 'Agent-04 (Local)', status: 'idle', icon: 'node', detail: 'User edge validation node' }
+  ]);
+  const [faults, setFaults] = useState<{ [key: string]: 'normal' | 'offline' | 'corrupt' }>({
+    'agent-1': 'normal',
+    'agent-2': 'normal',
+    'agent-3': 'normal',
+    'agent-4': 'normal'
+  });
 
   // Editor and simulation states
   const [isOnline, setIsOnline] = useState(true);
@@ -102,15 +168,24 @@ We will leverage decentralized technologies to scale our application without add
   const [pendingOps, setPendingOps] = useState<string[]>([]);
   const [syncedPeers, setSyncedPeers] = useState<string[]>(['Alice', 'Bob', 'AI Agent']);
   const [agentStatus, setAgentStatus] = useState<'idle' | 'analyzing' | 'generating'>('idle');
-  const [agentSuggestions, setAgentSuggestions] = useState<string[]>([]);
   const [peerActivity, setPeerActivity] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
+  // ZK Inference States
+  const [zkPrompt, setZkPrompt] = useState('Translate patient health record to structured JSON while verifying SOC2 compliance');
+  const [zkStatus, setZkStatus] = useState<'idle' | 'inferring' | 'proving' | 'verified'>('idle');
+  const [zkProgress, setZkProgress] = useState(0);
+  const [zkLogs, setZkLogs] = useState<string[]>([
+    '[System] zk-Inference Validator engine initialized.',
+    '[System] Ready to run verifiable LLM generation.'
+  ]);
+  const [zkOutput, setZkOutput] = useState('');
+  const [zkProof, setZkProof] = useState('');
+
   // Stats logs
   const [inferenceSpeed, setInferenceSpeed] = useState(0);
-  const [syncLatency, setSyncLatency] = useState(1.2);
   const [isTyping, setIsTyping] = useState(false);
-  const typingTimer = useRef<NodeJS.Timeout | null>(null);
+  const typingTimer = useRef<any>(null);
 
   // Trigger peer edit simulation every 15 seconds
   useEffect(() => {
@@ -222,6 +297,229 @@ We will leverage decentralized technologies to scale our application without add
         }, 100);
       }
     }, 600);
+  };
+
+  const runSwarmConsensus = () => {
+    if (swarmStatus !== 'idle') return;
+    setSwarmStatus('broadcasting');
+    setSwarmProgress(10);
+    setSwarmLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [Consensus] Raft Leader proposed new task: "${swarmTask}"`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Consensus] Indexing task vector representations for split...`
+    ]);
+
+    setAgents(prev => prev.map(a => a.id === 'leader' ? { ...a, status: 'broadcasting' } : a));
+
+    // Phase 1: Split & Broadcast
+    setTimeout(() => {
+      setSwarmStatus('inferring');
+      setSwarmProgress(35);
+      
+      const newLogs = [
+        `[${new Date().toTimeString().split(' ')[0]}] [Consensus] Broadcast complete. Task divided into 4 sub-tasks.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Consensus] Nodes spawning local LLM inference engines...`
+      ];
+
+      setAgents(prev => prev.map(a => {
+        if (a.id === 'leader') return { ...a, status: 'idle' };
+        const fault = faults[a.id];
+        if (fault === 'offline') {
+          newLogs.push(`[${new Date().toTimeString().split(' ')[0]}] [${a.name}] Node OFFLINE. Connection timeout.`);
+          return { ...a, status: 'offline' };
+        } else {
+          return { ...a, status: 'inferring' };
+        }
+      }));
+      setSwarmLogs(prev => [...prev, ...newLogs]);
+
+      // Phase 2: Local inference completes -> start Gossip Verification
+      setTimeout(() => {
+        setSwarmStatus('gossiping');
+        setSwarmProgress(60);
+        
+        const gossipLogs = [
+          `[${new Date().toTimeString().split(' ')[0]}] [Consensus] Local LLM tasks completed.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Consensus] Initiating WebRTC gossip channel vector-state exchange...`
+        ];
+
+        setAgents(prev => prev.map(a => {
+          if (a.status === 'offline') return a;
+          const fault = faults[a.id];
+          if (fault === 'corrupt') {
+            gossipLogs.push(`[${new Date().toTimeString().split(' ')[0]}] [${a.name}] Broadcasted completed state hash: 0xBAD_HASH (Malicious/Corrupted)`);
+            return { ...a, status: 'corrupt' };
+          } else {
+            const fakeHash = '0x' + Math.random().toString(16).substr(2, 6).toUpperCase();
+            gossipLogs.push(`[${new Date().toTimeString().split(' ')[0]}] [${a.name}] Broadcasted completed state hash: ${fakeHash} (Signature Valid)`);
+            return { ...a, status: 'gossiping' };
+          }
+        }));
+        setSwarmLogs(prev => [...prev, ...gossipLogs]);
+
+        // Phase 3: BFT Agreement Check
+        setTimeout(() => {
+          setSwarmStatus('bft-check');
+          setSwarmProgress(80);
+          
+          const activeNodesCount = Object.keys(faults).length + 1; // plus leader
+          const offlineNodes = Object.values(faults).filter(f => f === 'offline').length;
+          const corruptNodes = Object.values(faults).filter(f => f === 'corrupt').length;
+          const functioningNodes = activeNodesCount - offlineNodes - corruptNodes;
+          
+          const quorumRequired = Math.ceil((activeNodesCount * 2) / 3);
+          const consensusReached = functioningNodes >= quorumRequired;
+
+          const bftLogs = [
+            `[${new Date().toTimeString().split(' ')[0]}] [BFT Engine] Running Byzantine Fault Tolerant consensus evaluation...`,
+            `[${new Date().toTimeString().split(' ')[0]}] [BFT Engine] Total Swarm Nodes: ${activeNodesCount} | Offline: ${offlineNodes} | Corrupt: ${corruptNodes}`,
+            `[${new Date().toTimeString().split(' ')[0]}] [BFT Engine] Quorum Required: >=${quorumRequired} valid nodes | Functioning: ${functioningNodes}`
+          ];
+
+          setAgents(prev => prev.map(a => {
+            if (a.status === 'gossiping' || a.status === 'inferring') return { ...a, status: 'voting' };
+            return a;
+          }));
+
+          if (consensusReached) {
+            bftLogs.push(`[${new Date().toTimeString().split(' ')[0]}] [BFT Engine] Quorum verified. Consensus REACHED on task result!`);
+          } else {
+            bftLogs.push(`[${new Date().toTimeString().split(' ')[0]}] [BFT Engine] FAILED to reach consensus. Byzantine limit exceeded!`);
+          }
+
+          setSwarmLogs(prev => [...prev, ...bftLogs]);
+
+          // Phase 4: Commit / Result
+          setTimeout(() => {
+            setSwarmProgress(100);
+            if (consensusReached) {
+              setSwarmStatus('committed');
+              setSwarmLogs(prev => [
+                ...prev,
+                `[${new Date().toTimeString().split(' ')[0]}] [CRDT] State committed to local Y.js document log.`,
+                `[${new Date().toTimeString().split(' ')[0]}] [System] Swarm Task successfully integrated! ✨`
+              ]);
+              setAgents(prev => prev.map(a => {
+                if (a.status === 'voting' || a.id === 'leader') return { ...a, status: 'committed' };
+                return a;
+              }));
+              triggerFlash('Swarm task completed and committed via BFT consensus!');
+            } else {
+              setSwarmStatus('idle');
+              setSwarmProgress(0);
+              setSwarmLogs(prev => [
+                ...prev,
+                `[${new Date().toTimeString().split(' ')[0]}] [System] Transaction aborted. Please fix node faults and retry.`
+              ]);
+              setAgents(prev => prev.map(a => ({ ...a, status: 'idle' })));
+              triggerFlash('BFT Consensus Failed. Swarm transaction aborted.');
+            }
+          }, 1500);
+
+        }, 1800);
+
+      }, 1800);
+
+    }, 1200);
+  };
+
+  const resetSwarmSimulator = () => {
+    setSwarmStatus('idle');
+    setSwarmProgress(0);
+    setSwarmLogs([
+      '[System] Swarm consensus engine reset.',
+      '[System] Ready to broadcast task assignments to edge agent network.'
+    ]);
+    setAgents(prev => prev.map(a => ({ ...a, status: 'idle' })));
+  };
+
+  const runZkInference = () => {
+    if (zkStatus !== 'idle') return;
+    setZkStatus('inferring');
+    setZkProgress(10);
+    setZkOutput('');
+    setZkProof('');
+    setZkLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [LLM Engine] Spawning Llama-3-8B model context...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [LLM Engine] Setting prompt: "${zkPrompt}"`,
+      `[${new Date().toTimeString().split(' ')[0]}] [LLM Engine] Running inference steps (temperature = 0.2)...`
+    ]);
+
+    setTimeout(() => {
+      setZkProgress(35);
+      setZkStatus('proving');
+      setZkLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [LLM Engine] Inference complete (120 tokens generated).`,
+        `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] Synthesizing execution trace to constraint matrices...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] Active constraints: 262,144 | Arithmetic gates: 184,271`
+      ]);
+
+      setTimeout(() => {
+        setZkProgress(65);
+        setZkLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] Generating witness vectors...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] Witness generation complete. Running Multi-Scalar Multiplication (MSM)...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] WebGPU WGSL pipeline active for MSM calculations...`
+        ]);
+
+        setTimeout(() => {
+          setZkProgress(85);
+          setZkLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] Performing Number Theoretic Transform (NTT) polynomials...`,
+            `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] Creating Halo2 SNARK proof on BN254 curve...`
+          ]);
+
+          setTimeout(() => {
+            setZkProgress(100);
+            setZkStatus('verified');
+            setZkOutput(
+              JSON.stringify(
+                {
+                  patient: {
+                    id: "PT-9428",
+                    record_status: "verified",
+                    soc2_compliant: true,
+                    data_residency: "US-East-1"
+                  },
+                  extracted_entities: [
+                    { name: "Blood Pressure", value: "120/80" },
+                    { name: "Heart Rate", value: "72 bpm" }
+                  ]
+                },
+                null,
+                2
+              )
+            );
+            const generatedProof = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+            setZkProof(generatedProof);
+            setZkLogs(prev => [
+              ...prev,
+              `[${new Date().toTimeString().split(' ')[0]}] [ZK Prover] Cryptographic proof created! Size: 340 bytes.`,
+              `[${new Date().toTimeString().split(' ')[0]}] [Verifier] Executing sub-millisecond cryptographic pairing checks...`,
+              `[${new Date().toTimeString().split(' ')[0]}] [Verifier] PROOF VALID! Cryptographic verification score: 100%`,
+              `[${new Date().toTimeString().split(' ')[0]}] [System] Verifiable LLM generation completed successfully! ✨`
+            ]);
+            triggerFlash('zk-Inference generated and cryptographically verified successfully!');
+          }, 1500);
+
+        }, 1500);
+
+      }, 1500);
+
+    }, 1500);
+  };
+
+  const resetZkSimulator = () => {
+    setZkStatus('idle');
+    setZkProgress(0);
+    setZkOutput('');
+    setZkProof('');
+    setZkLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] zk-Inference Validator engine reset.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to run verifiable LLM generation.`
+    ]);
   };
 
   return (
@@ -449,7 +747,457 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'synaptic-crdt' ? (
+            {selectedProjectId === 'zk-inference' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Title & Task Input */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Inference Prompt
+                      </label>
+                      <input 
+                        type="text" 
+                        value={zkPrompt}
+                        onChange={(e) => setZkPrompt(e.target.value)}
+                        disabled={zkStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runZkInference}
+                        disabled={zkStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: zkStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: zkStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Run & Prove
+                      </button>
+                      <button 
+                        onClick={resetZkSimulator}
+                        disabled={zkStatus === 'inferring' || zkStatus === 'proving'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: (zkStatus === 'inferring' || zkStatus === 'proving') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  {zkStatus !== 'idle' && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {zkStatus === 'inferring' && 'Executing Local LLM inference...'}
+                          {zkStatus === 'proving' && 'Generating Halo2 ZK Proof...'}
+                          {zkStatus === 'verified' && 'Verification Complete!'}
+                        </span>
+                        <span style={{ color: 'var(--primary-color)' }}>{zkProgress}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${zkProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ height: '100%', background: 'linear-gradient(90deg, var(--accent-color), var(--primary-color))' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Verifiable Output Display */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Verifiable LLM Output
+                    </label>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <textarea
+                        readOnly
+                        value={zkOutput || (zkStatus === 'inferring' ? 'Generating tokens...' : zkStatus === 'proving' ? 'Verifying witness correctness...' : 'Outputs will be printed here after proving execution.')}
+                        style={{
+                          width: '100%',
+                          height: '220px',
+                          background: 'rgba(3, 7, 18, 0.4)',
+                          border: '1px solid var(--border-color)',
+                          padding: '1rem',
+                          borderRadius: '12px',
+                          color: zkOutput ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          fontSize: '0.85rem',
+                          fontFamily: zkOutput ? 'monospace' : 'inherit',
+                          outline: 'none',
+                          resize: 'none'
+                        }}
+                      />
+                      {zkStatus === 'verified' && (
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)', color: 'var(--success-color)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800 }}>
+                          <ShieldCheck size={12} /> PROOF VALID
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cryptographic Proof Data */}
+                  {zkProof && (
+                    <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '12px', padding: '1rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-color)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Halo2 SNARK Proof String (BN254 Curve)
+                      </div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        {zkProof}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Console Log Terminal Column */}
+                <div style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Terminal size={12} /> Cryptographic Proof Logs
+                    </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: zkStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#c084fc'
+                    }}
+                  >
+                    {zkLogs.map((log, idx) => {
+                      let color = '#c084fc';
+                      if (log.includes('complete') || log.includes('generated') || log.includes('VALID') || log.includes('verified')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('prover') || log.includes('proving') || log.includes('synthesizing') || log.includes('MSM') || log.includes('NTT')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Proof Parameters */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Prover Telemetry</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Proof System:</div>
+                        <div style={{ fontWeight: 700 }}>Halo2-Groth16</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Engine:</div>
+                        <div style={{ fontWeight: 700 }}>WebGPU WASM</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'swarm-consensus' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Title & Task Input */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Swarm Task Proposal
+                      </label>
+                      <input 
+                        type="text" 
+                        value={swarmTask}
+                        onChange={(e) => setSwarmTask(e.target.value)}
+                        disabled={swarmStatus !== 'idle'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          padding: '0.6rem 0.8rem',
+                          color: 'white',
+                          fontSize: '0.85rem',
+                          width: '100%',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <button 
+                      onClick={runSwarmConsensus}
+                      disabled={swarmStatus !== 'idle'}
+                      className="btn btn-primary"
+                      style={{ 
+                        padding: '0.6rem 1.2rem', 
+                        fontSize: '0.8rem', 
+                        height: '38px',
+                        cursor: swarmStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                        opacity: swarmStatus !== 'idle' ? 0.6 : 1
+                      }}
+                    >
+                      <Play size={14} /> Start Consensus
+                    </button>
+                    {swarmStatus !== 'idle' && (
+                      <button 
+                        onClick={resetSwarmSimulator}
+                        className="btn btn-secondary"
+                        style={{ padding: '0.6rem 1rem', fontSize: '0.8rem', height: '38px' }}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Progress Indicator */}
+                  {swarmStatus !== 'idle' && (
+                    <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {swarmStatus === 'broadcasting' && 'Broadcasting tasks...'}
+                          {swarmStatus === 'inferring' && 'Executing Local LLM inference...'}
+                          {swarmStatus === 'gossiping' && 'Exchanging cryptographic vector-state logs...'}
+                          {swarmStatus === 'bft-check' && 'Validating Byzantine Fault Tolerance agreement...'}
+                          {swarmStatus === 'committed' && 'Committed successfully! 🎉'}
+                        </span>
+                        <span style={{ fontWeight: 800, color: 'var(--primary-color)' }}>{swarmProgress}%</span>
+                      </div>
+                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <motion.div 
+                          style={{ height: '100%', background: 'linear-gradient(90deg, var(--primary-color), var(--accent-color))' }}
+                          animate={{ width: `${swarmProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Agents Visual Node Grid */}
+                  <div>
+                    <h5 style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                      Edge Agent Swarm Grid
+                    </h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
+                      {agents.map((agent) => {
+                        const isLeader = agent.id === 'leader';
+                        let statusColor = 'var(--text-secondary)';
+                        let statusBg = 'rgba(255, 255, 255, 0.02)';
+                        let statusBorder = 'var(--border-color)';
+                        let statusLabel = 'Idle';
+
+                        if (agent.status === 'broadcasting') {
+                          statusColor = 'var(--primary-color)';
+                          statusBg = 'rgba(59, 130, 246, 0.08)';
+                          statusBorder = 'rgba(59, 130, 246, 0.3)';
+                          statusLabel = 'Syncing';
+                        } else if (agent.status === 'inferring') {
+                          statusColor = 'var(--accent-color)';
+                          statusBg = 'rgba(139, 92, 246, 0.08)';
+                          statusBorder = 'rgba(139, 92, 246, 0.3)';
+                          statusLabel = 'LLM Run';
+                        } else if (agent.status === 'gossiping') {
+                          statusColor = 'var(--warning-color)';
+                          statusBg = 'rgba(245, 158, 11, 0.08)';
+                          statusBorder = 'rgba(245, 158, 11, 0.3)';
+                          statusLabel = 'Gossip';
+                        } else if (agent.status === 'voting') {
+                          statusColor = 'cyan';
+                          statusBg = 'rgba(6, 182, 212, 0.08)';
+                          statusBorder = 'rgba(6, 182, 212, 0.3)';
+                          statusLabel = 'Voting';
+                        } else if (agent.status === 'committed') {
+                          statusColor = 'var(--success-color)';
+                          statusBg = 'rgba(16, 185, 129, 0.08)';
+                          statusBorder = 'rgba(16, 185, 129, 0.3)';
+                          statusLabel = 'Committed';
+                        } else if (agent.status === 'offline') {
+                          statusColor = 'var(--error-color)';
+                          statusBg = 'rgba(239, 68, 68, 0.08)';
+                          statusBorder = 'rgba(239, 68, 68, 0.3)';
+                          statusLabel = 'Offline';
+                        } else if (agent.status === 'corrupt') {
+                          statusColor = 'var(--error-color)';
+                          statusBg = 'rgba(239, 68, 68, 0.08)';
+                          statusBorder = 'rgba(239, 68, 68, 0.3)';
+                          statusLabel = 'Corrupted';
+                        }
+
+                        return (
+                          <div 
+                            key={agent.id}
+                            style={{
+                              background: statusBg,
+                              border: `1.5px solid ${statusBorder}`,
+                              borderRadius: '10px',
+                              padding: '0.75rem 0.5rem',
+                              textAlign: 'center',
+                              position: 'relative',
+                              boxShadow: agent.status !== 'idle' ? `0 0 10px ${statusBorder}` : 'none'
+                            }}
+                          >
+                            {/* Icon Indicator */}
+                            <div style={{ display: 'inline-flex', padding: '0.4rem', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', marginBottom: '0.4rem', color: statusColor }}>
+                              {isLeader ? <Crown size={16} /> : <Cpu size={16} />}
+                            </div>
+                            
+                            <div style={{ fontSize: '0.75rem', fontWeight: 800, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{agent.name}</div>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>{agent.detail}</div>
+                            
+                            <span style={{ 
+                              fontSize: '0.55rem', 
+                              fontWeight: 800, 
+                              color: statusColor, 
+                              background: 'rgba(255,255,255,0.02)',
+                              padding: '0.1rem 0.3rem', 
+                              borderRadius: '4px',
+                              border: `1px solid ${statusBorder}`,
+                              textTransform: 'uppercase'
+                            }}>
+                              {statusLabel}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Fault Injector Panel */}
+                  <div style={{ background: 'rgba(15, 23, 42, 0.3)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                      <AlertTriangle size={15} color="var(--warning-color)" />
+                      <h6 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', margin: 0 }}>Consensus Byzantine Fault Injector</h6>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      {Object.keys(faults).map((agentKey) => {
+                        const agentObj = agents.find(a => a.id === agentKey);
+                        return (
+                          <div key={agentKey} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{agentObj?.name} Status:</span>
+                            <select
+                              value={faults[agentKey]}
+                              onChange={(e) => {
+                                setFaults(prev => ({ ...prev, [agentKey]: e.target.value as any }));
+                                resetSwarmSimulator();
+                              }}
+                              disabled={swarmStatus !== 'idle'}
+                              style={{
+                                background: 'rgba(3, 7, 18, 0.5)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '6px',
+                                padding: '0.3rem',
+                                color: 'white',
+                                fontSize: '0.7rem',
+                                outline: 'none'
+                              }}
+                            >
+                              <option value="normal">🟢 Normal Node</option>
+                              <option value="offline">⚪ Offline (No Sync)</option>
+                              <option value="corrupt">🔴 Corrupt / Malicious</option>
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.75rem', fontStyle: 'italic' }}>
+                      *BFT consensus requires &gt;= 2/3 of active nodes (4 out of 5 total nodes) to be healthy and correct to finalize the task.
+                    </p>
+                  </div>
+
+                </div>
+
+                {/* Console Log Terminal Column */}
+                <div style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Terminal size={12} /> BFT Consensus Live Logs
+                    </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: swarmStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#a7f3d0'
+                    }}
+                  >
+                    {swarmLogs.map((log, idx) => {
+                      let color = '#a7f3d0';
+                      if (log.includes('OFFLINE') || log.includes('FAILED') || log.includes('aborted') || log.includes('Malicious')) {
+                        color = 'var(--error-color)';
+                      } else if (log.includes('BFT') || log.includes('Byzantine')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('successfully') || log.includes('REACHED')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'synaptic-crdt' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', minHeight: '420px' }}>
                 
                 {/* Editor Column */}
@@ -680,9 +1428,9 @@ We will leverage decentralized technologies to scale our application without add
                 </div>
                 <h4 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Simulation Offline for this project</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '400px', lineHeight: '1.5', marginBottom: '1.5rem' }}>
-                  The fully interactive visual simulator is currently active on the main daily experiment: <strong>Synaptic-CRDT</strong>. Load that experiment to play with the network syncing.
+                  The fully interactive visual simulator is currently active on the main daily experiment: <strong>zk-Inference Validator</strong>. Load that experiment to run verifiable LLM generation.
                 </p>
-                <button className="btn btn-secondary" onClick={() => setSelectedProjectId('synaptic-crdt')}>
+                <button className="btn btn-secondary" onClick={() => setSelectedProjectId('zk-inference')}>
                   Switch to Active Experiment
                 </button>
               </div>
