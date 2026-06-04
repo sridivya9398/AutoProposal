@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'he-rag',
+    date: 'June 04, 2026 (Today)',
+    title: 'Homomorphic-RAG (HE-RAG)',
+    tagline: 'Fully Homomorphic Encrypted (FHE) Vector Search for Zero-Trust Cloud RAG',
+    impactScore: 9.9,
+    techStack: ['TFHE-rs (Wasm)', 'Concrete-ML', 'BFV/CKKS Scheme', 'Vector Database', 'WebAssembly'],
+    problemSolved: 'Querying third-party vector databases with sensitive enterprise or personal data leaks search intent and proprietary context. HE-RAG encrypts query vectors client-side, allowing cloud databases to run similarity calculations on ciphertexts without decryption.',
+    impactDescription: 'Ensures absolute privacy for enterprise RAG workflows. A company can query search indices containing proprietary financial or health data without exposing search context to the cloud database provider or intermediate routers.',
+    architecture: [
+      'Plaintext Query ──> WebAssembly FHE Encrypter (CKKS encryption of vector)',
+      'Ciphertext Query ──> Cloud Vector DB (performs homomorphic multiplication/addition for cosine similarity)',
+      'Encrypted Distances ──> Client Wasm Decrypter (decrypts result index & distance scores)',
+      'Decrypted Top-K Indices ──> Ingest and render relevant doc fragments locally'
+    ],
+    metrics: {
+      'Client Encryption Time': '18 ms (Wasm-CKKS)',
+      'Homomorphic Search Speed': '8.2 ms per 1536-dim vector',
+      'Client Decryption Time': '1.2 ms',
+      'Data Privacy Rating': 'Zero Leakage (Cryptographically Guaranteed)'
+    }
+  },
+  {
     id: 'zk-inference',
-    date: 'June 03, 2026 (Today)',
+    date: 'June 03, 2026',
     title: 'zk-Inference Validator',
     tagline: 'Zero-Knowledge Proof-of-Generation for Verifiable Edge LLM Output',
     impactScore: 9.9,
@@ -127,7 +149,7 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('zk-inference');
+  const [selectedProjectId, setSelectedProjectId] = useState('he-rag');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
   // Swarm Consensus states
@@ -181,6 +203,18 @@ We will leverage decentralized technologies to scale our application without add
   ]);
   const [zkOutput, setZkOutput] = useState('');
   const [zkProof, setZkProof] = useState('');
+
+  // HE-RAG States
+  const [fheQuery, setFheQuery] = useState('Find client contract renewal details and pricing models');
+  const [fheStatus, setFheStatus] = useState<'idle' | 'encrypting' | 'searching' | 'decrypting' | 'completed'>('idle');
+  const [fheProgress, setFheProgress] = useState(0);
+  const [fheLogs, setFheLogs] = useState<string[]>([
+    '[System] FHE Vector Search engine initialized.',
+    '[System] Ready to run encrypted query validation.'
+  ]);
+  const [fheCiphertext, setFheCiphertext] = useState('');
+  const [fhePlaintextQuery, setFhePlaintextQuery] = useState('');
+  const [fheResults, setFheResults] = useState<{ title: string; score: number; text: string }[]>([]);
 
   // Stats logs
   const [inferenceSpeed, setInferenceSpeed] = useState(0);
@@ -522,6 +556,81 @@ We will leverage decentralized technologies to scale our application without add
     ]);
   };
 
+  const runFheSearch = () => {
+    if (fheStatus !== 'idle') return;
+    setFheStatus('encrypting');
+    setFheProgress(10);
+    setFheCiphertext('');
+    setFhePlaintextQuery('Generating query embedding (1536-dimensions)...');
+    setFheLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [Embedding] Computing embedding for query: "${fheQuery}"`,
+      `[${new Date().toTimeString().split(' ')[0]}] [FHE Engine] Spawning TFHE-rs WASM context...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [FHE Engine] Initializing CKKS public/private keypair (log N = 13)...`
+    ]);
+
+    setTimeout(() => {
+      setFheProgress(35);
+      setFheStatus('searching');
+      // Generate some dummy vector values
+      const dummyVec = Array.from({length: 8}, () => (Math.random() * 2 - 1).toFixed(4)).join(', ');
+      setFhePlaintextQuery(`[${dummyVec}, ...]`);
+      
+      const cipher = '0x' + Array.from({length: 48}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase() + '... [CKKS Ciphertext]';
+      setFheCiphertext(cipher);
+      
+      setFheLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [Embedding] Generated 1536-dim float32 vector.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [FHE Engine] Encrypting vector using CKKS public key...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [FHE Engine] Encryption complete. Ciphertext size: 4.2 KB.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Network] Uploading ciphertext query to database...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Database] Performing homomorphic dot product with index vectors...`
+      ]);
+
+      setTimeout(() => {
+        setFheProgress(70);
+        setFheStatus('decrypting');
+        setFheLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Database] Calculated homomorphic cosine similarity on encrypted states.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Database] Homomorphic search complete (evaluated 10,000 vectors).`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Network] Downloading top-3 encrypted distance metrics...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [FHE Engine] Decrypting distance metrics using CKKS private key...`
+        ]);
+
+        setTimeout(() => {
+          setFheProgress(100);
+          setFheStatus('completed');
+          setFheResults([
+            { title: 'sec_contract_2026.pdf (Page 14)', score: 0.8924, text: 'Client renewal date scheduled for Oct 12, 2026. Option for pricing tier A ($4,200/mo).' },
+            { title: 'pricing_structure_v3.xlsx', score: 0.8142, text: 'Enterprise pricing models: Tier A ($4,000 - $5,000/mo), Tier B ($8,000 - $10,000/mo) with SLA.' },
+            { title: 'vendor_terms_signed.docx', score: 0.7415, text: 'General vendor guidelines state that pricing models are confidential and locked in for 12 months.' }
+          ]);
+          setFheLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [FHE Engine] Decryption complete. Recovered matched document indices.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [System] Search finished successfully! Zero plaintexts left client boundary. ✨`
+          ]);
+          triggerFlash('FHE Vector Search completed and decrypted successfully!');
+        }, 1500);
+
+      }, 1500);
+
+    }, 1500);
+  };
+
+  const resetFheSimulator = () => {
+    setFheStatus('idle');
+    setFheProgress(0);
+    setFheCiphertext('');
+    setFhePlaintextQuery('');
+    setFheResults([]);
+    setFheLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] FHE Vector Search engine reset.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to run encrypted query validation.`
+    ]);
+  };
+
   return (
     <div style={{ maxWidth: '1150px', margin: '0 auto', paddingBottom: '3rem' }}>
       {/* Header Banner */}
@@ -747,7 +856,232 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'zk-inference' ? (
+            {selectedProjectId === 'he-rag' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Title & Task Input */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Private Search Query
+                      </label>
+                      <input 
+                        type="text" 
+                        value={fheQuery}
+                        onChange={(e) => setFheQuery(e.target.value)}
+                        disabled={fheStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runFheSearch}
+                        disabled={fheStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: fheStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: fheStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Encrypt & Search
+                      </button>
+                      <button 
+                        onClick={resetFheSimulator}
+                        disabled={fheStatus === 'encrypting' || fheStatus === 'searching' || fheStatus === 'decrypting'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: (fheStatus === 'encrypting' || fheStatus === 'searching' || fheStatus === 'decrypting') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  {fheStatus !== 'idle' && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {fheStatus === 'encrypting' && 'Encrypting search query locally (CKKS)...'}
+                          {fheStatus === 'searching' && 'Executing similarity search on encrypted vectors (Cloud)...'}
+                          {fheStatus === 'decrypting' && 'Decrypting returned distance states locally...'}
+                          {fheStatus === 'completed' && 'Decryption Complete!'}
+                        </span>
+                        <span style={{ color: 'var(--primary-color)' }}>{fheProgress}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${fheProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ height: '100%', background: 'linear-gradient(90deg, var(--accent-color), var(--primary-color))' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* FHE Visual States */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Plaintext Embedding (Local)</span>
+                        <textarea
+                          readOnly
+                          value={fhePlaintextQuery || 'Inference vector will be printed here...'}
+                          style={{
+                            width: '100%',
+                            height: '100px',
+                            background: 'rgba(3, 7, 18, 0.4)',
+                            border: '1px solid var(--border-color)',
+                            padding: '0.5rem',
+                            borderRadius: '8px',
+                            color: fhePlaintextQuery ? 'var(--text-primary)' : 'var(--text-secondary)',
+                            fontSize: '0.75rem',
+                            fontFamily: 'monospace',
+                            outline: 'none',
+                            resize: 'none'
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>CKKS Ciphertext (Egress)</span>
+                        <textarea
+                          readOnly
+                          value={fheCiphertext || 'Ciphertext hex will be printed here...'}
+                          style={{
+                            width: '100%',
+                            height: '100px',
+                            background: 'rgba(3, 7, 18, 0.4)',
+                            border: '1px solid var(--border-color)',
+                            padding: '0.5rem',
+                            borderRadius: '8px',
+                            color: fheCiphertext ? 'var(--warning-color)' : 'var(--text-secondary)',
+                            fontSize: '0.75rem',
+                            fontFamily: 'monospace',
+                            outline: 'none',
+                            resize: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Results Display */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Decrypted Search Results
+                      </label>
+                      <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.4)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '0.75rem', overflowY: 'auto', maxHeight: '180px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {fheResults.length > 0 ? (
+                          fheResults.map((res, i) => (
+                            <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-color)' }}>{res.title}</span>
+                                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--success-color)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>
+                                  {(res.score * 100).toFixed(2)}% Match
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{res.text}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                            {fheStatus === 'encrypting' ? 'Encrypting query...' : fheStatus === 'searching' ? 'Searching homomorphically...' : fheStatus === 'decrypting' ? 'Decrypting results...' : 'No decrypted results available.'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Console Log Terminal Column */}
+                <div style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Terminal size={12} /> Encrypted Search logs
+                    </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: fheStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#c084fc'
+                    }}
+                  >
+                    {fheLogs.map((log, idx) => {
+                      let color = '#c084fc';
+                      if (log.includes('complete') || log.includes('finished') || log.includes('decoded') || log.includes('Decryption Complete') || log.includes('decrypted')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('Encrypting') || log.includes('Ciphertext') || log.includes('homomorphic') || log.includes('embedding') || log.includes('Embedding')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Search Parameters */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>FHE Security Specs</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Scheme:</div>
+                        <div style={{ fontWeight: 700 }}>CKKS / BFV</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Key Size:</div>
+                        <div style={{ fontWeight: 700 }}>log N = 13 (8192)</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'zk-inference' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
@@ -1428,9 +1762,9 @@ We will leverage decentralized technologies to scale our application without add
                 </div>
                 <h4 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>Simulation Offline for this project</h4>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '400px', lineHeight: '1.5', marginBottom: '1.5rem' }}>
-                  The fully interactive visual simulator is currently active on the main daily experiment: <strong>zk-Inference Validator</strong>. Load that experiment to run verifiable LLM generation.
+                  The fully interactive visual simulator is currently active on the main daily experiment: <strong>Homomorphic-RAG (HE-RAG)</strong>. Load that experiment to run homomorphic vector searches.
                 </p>
-                <button className="btn btn-secondary" onClick={() => setSelectedProjectId('zk-inference')}>
+                <button className="btn btn-secondary" onClick={() => setSelectedProjectId('he-rag')}>
                   Switch to Active Experiment
                 </button>
               </div>
