@@ -70,6 +70,10 @@ async function run() {
   let content = '';
   if (fs.existsSync(logFile)) {
     content = fs.readFileSync(logFile, 'utf8');
+    if (content.includes(`## ${dateStr}`) && !process.argv.includes('--force')) {
+      console.log(`Daily log for ${dateStr} already exists. Skipping to avoid duplicates.`);
+      return;
+    }
   } else {
     content = '# 🚀 AutoProposal: Daily Evolution Log\n\nThis file is updated daily by the Antigravity AI to track project progress and keep the momentum alive.\n\n';
   }
