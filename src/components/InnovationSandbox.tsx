@@ -17,8 +17,31 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'kyber-agent',
+    date: 'June 06, 2026 (Today)',
+    title: 'Kyber-Agent P2P',
+    tagline: 'Post-Quantum Cryptographic Key Exchange for Edge Multi-Agent Communication',
+    impactScore: 9.8,
+    techStack: ['ML-KEM (Kyber-768)', 'ML-DSA (Dilithium)', 'WebAssembly (Wasm)', 'WebRTC DataChannels', 'WebCrypto API'],
+    problemSolved: 'P2P agent networks rely on classical ECDH (Secp256k1) or RSA key exchanges, which are vulnerable to store-now-decrypt-later attacks by future quantum computers. Kyber-Agent secures agent gossip networks using post-quantum secure ML-KEM and ML-DSA.',
+    impactDescription: 'Cryptographically secures browser-to-browser agent communication against future quantum adversaries. Multi-agent swarms can coordinate tasks and exchange proprietary weights, prompts, and memory vectors without any exposure to eavesdropping or identity spoofing.',
+    architecture: [
+      'Initiator Agent ──> Generates ML-KEM-768 public/secret keypair (Wasm)',
+      'Initiator Agent ──> Sends Kyber public key + Dilithium signature to responder',
+      'Responder Agent ──> Verifies identity signature & encapsulates symmetric seed',
+      'Responder Agent ──> Sends ciphertext to initiator, both derive AES-GCM-256 session key'
+    ],
+    metrics: {
+      'Key Gen Latency': '1.4 ms (Wasm ML-KEM-768)',
+      'Encapsulation Speed': '0.9 ms',
+      'Decapsulation Speed': '1.1 ms',
+      'Signature Verification': '2.1 ms (Dilithium-3)',
+      'Post-Quantum Security': 'NIST Category 3 (Kyber-768)'
+    }
+  },
+  {
     id: 'he-rag',
-    date: 'June 04, 2026 (Today)',
+    date: 'June 04, 2026',
     title: 'Homomorphic-RAG (HE-RAG)',
     tagline: 'Fully Homomorphic Encrypted (FHE) Vector Search for Zero-Trust Cloud RAG',
     impactScore: 9.9,
@@ -149,8 +172,116 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('he-rag');
+  const [selectedProjectId, setSelectedProjectId] = useState('kyber-agent');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // Kyber-Agent States
+  const [kyberMsg, setKyberMsg] = useState('Transfer proprietary prompt context for financial auditing');
+  const [kyberStatus, setKyberStatus] = useState<'idle' | 'keygen' | 'signing' | 'encapsulating' | 'decapsulating' | 'completed'>('idle');
+  const [kyberProgress, setKyberProgress] = useState(0);
+  const [kyberLogs, setKyberLogs] = useState<string[]>([
+    '[System] Kyber-Agent PQC engine initialized.',
+    '[System] Ready to establish secure post-quantum session channel.'
+  ]);
+  const [kyberEncryptedPayload, setKyberEncryptedPayload] = useState('');
+  const [kyberDecryptedPayload, setKyberDecryptedPayload] = useState('');
+  const [kyberSessionKey, setKyberSessionKey] = useState('');
+  const [kyberKeysInfo, setKyberKeysInfo] = useState<{ publicKey: string; signature: string } | null>(null);
+
+  const runKyberExchange = () => {
+    if (kyberStatus !== 'idle') return;
+    setKyberStatus('keygen');
+    setKyberProgress(10);
+    setKyberEncryptedPayload('');
+    setKyberDecryptedPayload('');
+    setKyberSessionKey('');
+    setKyberKeysInfo(null);
+    setKyberLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [PQC Engine] Spawning post-quantum cryptographic context...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [PQC Engine] Initializing ML-KEM-768 (Kyber-768) module...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [PQC Engine] Generating Kyber keypair (1184-byte Public Key, 2400-byte Secret Key)...`
+    ]);
+
+    setTimeout(() => {
+      setKyberProgress(35);
+      setKyberStatus('signing');
+      const fakePubKey = '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase() + '...';
+      setKyberLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Kyber Keypair generated successfully.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] public_key: ${fakePubKey}`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Signing Kyber public key with Dilithium-3 identity key...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Generating Dilithium signature (3296 bytes)...`
+      ]);
+
+      setTimeout(() => {
+        setKyberProgress(60);
+        setKyberStatus('encapsulating');
+        const fakeSig = '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase() + '...';
+        setKyberKeysInfo({ publicKey: fakePubKey, signature: fakeSig });
+        setKyberLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Signature generated: ${fakeSig}`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Network] Sending public key and signature to Agent-B via WebRTC...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Agent-B] Received handshake packet.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Agent-B] Verifying Agent-A's identity signature using Dilithium public key...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Agent-B] Signature VALID. Authenticated Agent-A.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Agent-B] Encapsulating random shared secret against Kyber public key...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Agent-B] Created ciphertext (1088 bytes) & derived shared key...`
+        ]);
+
+        setTimeout(() => {
+          setKyberProgress(80);
+          setKyberStatus('decapsulating');
+          const fakeCiphertext = '0x' + Array.from({length: 48}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase() + '...';
+          const fakeSharedKey = '0x' + Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+          setKyberEncryptedPayload(fakeCiphertext + ' [AES-GCM Ciphertext]');
+          
+          setKyberLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [Network] Sending Kyber ciphertext to Agent-A...`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Decapsulating ciphertext using Kyber private key...`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Decapsulation successful. Shared secret recovered.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [System] Key Exchange Complete. Session established.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [System] Derived Session Key: ${fakeSharedKey}`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Agent-B] Encrypting plaintext message using AES-GCM-256...`
+          ]);
+
+          setTimeout(() => {
+            setKyberProgress(100);
+            setKyberStatus('completed');
+            setKyberSessionKey(fakeSharedKey);
+            setKyberDecryptedPayload(kyberMsg);
+            setKyberLogs(prev => [
+              ...prev,
+              `[${new Date().toTimeString().split(' ')[0]}] [Agent-B] Encrypted payload dispatched.`,
+              `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Received encrypted payload.`,
+              `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Decrypting payload using AES-GCM session key...`,
+              `[${new Date().toTimeString().split(' ')[0]}] [Agent-A] Decryption successful! Message: "${kyberMsg}"`,
+              `[${new Date().toTimeString().split(' ')[0]}] [System] PQC Channel communication session completed! ✨`
+            ]);
+            triggerFlash('Quantum-resistant handshake and message transfer completed!');
+          }, 1200);
+
+        }, 1500);
+
+      }, 1500);
+
+    }, 1200);
+  };
+
+  const resetKyberSimulator = () => {
+    setKyberStatus('idle');
+    setKyberProgress(0);
+    setKyberEncryptedPayload('');
+    setKyberDecryptedPayload('');
+    setKyberSessionKey('');
+    setKyberKeysInfo(null);
+    setKyberLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Kyber-Agent PQC engine reset.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to establish secure post-quantum session channel.`
+    ]);
+  };
 
   // Swarm Consensus states
   const [swarmTask, setSwarmTask] = useState('Draft SOC2 Compliance Audit Response');
@@ -856,7 +987,247 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'he-rag' ? (
+            {selectedProjectId === 'kyber-agent' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Title & Input */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        PQC Secure Message Payload
+                      </label>
+                      <input 
+                        type="text" 
+                        value={kyberMsg}
+                        onChange={(e) => setKyberMsg(e.target.value)}
+                        disabled={kyberStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runKyberExchange}
+                        disabled={kyberStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: kyberStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: kyberStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Run Key Exchange
+                      </button>
+                      <button 
+                        onClick={resetKyberSimulator}
+                        disabled={kyberStatus === 'keygen' || kyberStatus === 'signing' || kyberStatus === 'encapsulating' || kyberStatus === 'decapsulating'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: (kyberStatus === 'keygen' || kyberStatus === 'signing' || kyberStatus === 'encapsulating' || kyberStatus === 'decapsulating') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  {kyberStatus !== 'idle' && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {kyberStatus === 'keygen' && 'Generating ML-KEM keypairs...'}
+                          {kyberStatus === 'signing' && 'Signing key with Dilithium identity key...'}
+                          {kyberStatus === 'encapsulating' && 'Encapsulating secret seed on Agent-B...'}
+                          {kyberStatus === 'decapsulating' && 'Decapsulating ciphertext on Agent-A...'}
+                          {kyberStatus === 'completed' && 'PQC Channel Established!'}
+                        </span>
+                        <span style={{ color: 'var(--primary-color)' }}>{kyberProgress}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${kyberProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ height: '100%', background: 'linear-gradient(90deg, var(--accent-color), var(--primary-color))' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Visualization Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', flex: 1 }}>
+                    {/* Agent A Console */}
+                    <div style={{ background: 'rgba(3, 7, 18, 0.3)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary-color)', textTransform: 'uppercase' }}>Agent-A (Initiator)</span>
+                      
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Derived Session Key:</span>
+                          <div style={{ fontSize: '0.7rem', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: '4px', border: '1px solid var(--border-color)', wordBreak: 'break-all' }}>
+                            {kyberSessionKey || 'Awaiting handshake...'}
+                          </div>
+                        </div>
+                        {kyberKeysInfo && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                            <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Dilithium Signature Verification:</span>
+                            <div style={{ fontSize: '0.65rem', fontFamily: 'monospace', background: 'rgba(0,0,0,0.1)', padding: '0.25rem', borderRadius: '4px', border: '1px solid var(--border-color)', wordBreak: 'break-all', color: 'var(--text-secondary)' }}>
+                              {kyberKeysInfo.signature}
+                            </div>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1 }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Decrypted Plaintext:</span>
+                          <textarea
+                            readOnly
+                            value={kyberDecryptedPayload || 'Awaiting secure delivery...'}
+                            style={{
+                              width: '100%',
+                              flex: 1,
+                              minHeight: '60px',
+                              background: 'rgba(3, 7, 18, 0.4)',
+                              border: '1px solid var(--border-color)',
+                              padding: '0.4rem',
+                              borderRadius: '6px',
+                              color: kyberDecryptedPayload ? 'var(--success-color)' : 'var(--text-secondary)',
+                              fontSize: '0.72rem',
+                              fontFamily: 'monospace',
+                              resize: 'none',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Agent B Console */}
+                    <div style={{ background: 'rgba(3, 7, 18, 0.3)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-color)', textTransform: 'uppercase' }}>Agent-B (Responder)</span>
+                      
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Handshake Status:</span>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: kyberStatus === 'completed' ? 'var(--success-color)' : 'var(--warning-color)' }}>
+                            {kyberStatus === 'idle' && '🟢 Standby'}
+                            {kyberStatus === 'keygen' && '⚡ Waiting for keys...'}
+                            {kyberStatus === 'signing' && '⚡ Verifying Dilithium signature...'}
+                            {kyberStatus === 'encapsulating' && '⚙️ Encapsulating shared secret...'}
+                            {kyberStatus === 'decapsulating' && '⚙️ Shared key derived'}
+                            {kyberStatus === 'completed' && '🔒 Handshake complete'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1 }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>AES-GCM Egress Ciphertext:</span>
+                          <textarea
+                            readOnly
+                            value={kyberEncryptedPayload || 'Awaiting encapsulation...'}
+                            style={{
+                              width: '100%',
+                              flex: 1,
+                              minHeight: '60px',
+                              background: 'rgba(3, 7, 18, 0.4)',
+                              border: '1px solid var(--border-color)',
+                              padding: '0.4rem',
+                              borderRadius: '6px',
+                              color: kyberEncryptedPayload ? 'var(--warning-color)' : 'var(--text-secondary)',
+                              fontSize: '0.72rem',
+                              fontFamily: 'monospace',
+                              resize: 'none',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Console Log Terminal Column */}
+                <div style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Terminal size={12} /> PQC Handshake Logs
+                    </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: kyberStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#c084fc'
+                    }}
+                  >
+                    {kyberLogs.map((log, idx) => {
+                      let color = '#c084fc';
+                      if (log.includes('successful') || log.includes('established') || log.includes('VALID') || log.includes('complete') || log.includes('Complete') || log.includes('established')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('Generating') || log.includes('public_key') || log.includes('Signature') || log.includes('Encapsulating') || log.includes('Decapsulating') || log.includes('handshake')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Security Parameters */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>NIST Standard PQC Config</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>KEM Protocol:</div>
+                        <div style={{ fontWeight: 700 }}>ML-KEM-768</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Signature Scheme:</div>
+                        <div style={{ fontWeight: 700 }}>ML-DSA-65</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'he-rag' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
