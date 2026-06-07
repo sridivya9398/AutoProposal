@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Cpu, Wifi, WifiOff, Play, Terminal, Code, Sparkles, ShieldCheck, Database, Layers, Check, Crown, AlertTriangle } from 'lucide-react';
+import { Cpu, Wifi, WifiOff, Play, Terminal, Code, Sparkles, ShieldCheck, Database, Layers, Check, Crown, AlertTriangle, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TechProject {
@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'depin-billing',
+    date: 'June 07, 2026 (Today)',
+    title: 'DePIN-Agent Billing',
+    tagline: 'Decentralized Agent-to-Agent Micro-billing and Resource Allocation on DePIN Networks',
+    impactScore: 9.7,
+    techStack: ['Solidity (ERC-4337)', 'Lit Protocol', 'Chainlink Functions', 'Arbitrum Stylus', 'ECDSA Secp256k1'],
+    problemSolved: 'AI agents running on decentralized edge networks need a trustless way to pay each other for API calls, compute power, and data access. Traditional web2 APIs rely on centralized credit cards or API keys which agents cannot directly register or manage.',
+    impactDescription: 'Enables a self-sovereign agent economy. Edge agents can verify execution bounds and automatically authorize micro-payments to peer agents or hosting providers using ERC-4337 account abstraction and threshold cryptography, paying exactly for the compute consumed.',
+    architecture: [
+      'Agent-A (Client) ──> Formulates query and signs pay-per-compute voucher (ERC-4337)',
+      'DePIN Node (Provider) ──> Runs local WebGPU LLM task and registers compute metrics',
+      'Lit Protocol Node ──> Verifies compute completion proof and triggers threshold decryption',
+      'Smart Contract ──> Settles micro-payment channel and releases funds to DePIN provider'
+    ],
+    metrics: {
+      'Gas Settlement Cost': '$0.002 (Arbitrum Stylus)',
+      'Micro-billing Latency': '250 ms (Threshold signing)',
+      'Verification Overhead': '1.8 ms (Local proof validation)',
+      'Trust Model': 'Decentralized Account Abstraction (ERC-4337)'
+    }
+  },
+  {
     id: 'kyber-agent',
-    date: 'June 06, 2026 (Today)',
+    date: 'June 06, 2026',
     title: 'Kyber-Agent P2P',
     tagline: 'Post-Quantum Cryptographic Key Exchange for Edge Multi-Agent Communication',
     impactScore: 9.8,
@@ -172,8 +194,86 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('kyber-agent');
+  const [selectedProjectId, setSelectedProjectId] = useState('depin-billing');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // DePIN Billing States
+  const [depinTask, setDepinTask] = useState('Verify & Parse 500 Security Questionnaire Rows');
+  const [depinStatus, setDepinStatus] = useState<'idle' | 'voucher' | 'submitting' | 'verifying' | 'settled'>('idle');
+  const [depinProgress, setDepinProgress] = useState(0);
+  const [depinLogs, setDepinLogs] = useState<string[]>([
+    '[System] DePIN Agent Billing Engine initialized.',
+    '[System] Ready to run compute transaction and micro-settlement.'
+  ]);
+  const [depinEscrow, setDepinEscrow] = useState('0.0000 ETH');
+  const [depinTxHash, setDepinTxHash] = useState('');
+
+  const runDepinBilling = () => {
+    if (depinStatus !== 'idle') return;
+    setDepinStatus('voucher');
+    setDepinProgress(10);
+    setDepinEscrow('0.0000 ETH');
+    setDepinTxHash('');
+    setDepinLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [Client] Creating micro-payment voucher for task: "${depinTask}"`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Client] Estimating compute cost (2.5 Gigaflops execution target)...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Client] Authorizing ERC-4337 user operation (UserOp)...`
+    ]);
+
+    setTimeout(() => {
+      setDepinProgress(35);
+      setDepinStatus('submitting');
+      const fakeUserOpHash = '0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase() + '...';
+      setDepinLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [Client] Signed UserOp with Local ECDSA (Secp256k1) key.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Client] UserOp Hash: ${fakeUserOpHash}`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Bundler] Submitting UserOp to ERC-4337 Alt-MemPool...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Escrow] Lock 0.0005 ETH ($1.75 USD equivalent) in Smart Escrow Contract.`
+      ]);
+      setDepinEscrow('0.0005 ETH');
+
+      setTimeout(() => {
+        setDepinProgress(65);
+        setDepinStatus('verifying');
+        setDepinLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Bundler] Packaged UserOp into transaction block.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Network] Executing compute on Arbitrum Stylus sandboxed VM...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [DePIN Node] WebGPU LLM validation completed. Generating computation proof...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Lit Protocol] Verifying threshold signature of DePIN execution bounds...`
+        ]);
+
+        setTimeout(() => {
+          setDepinProgress(100);
+          setDepinStatus('settled');
+          const fakeTxHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+          setDepinTxHash(fakeTxHash);
+          setDepinLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [Lit Protocol] Threshold signature validated. Proof of execution is AUTHENTIC.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Smart Contract] Releasing escrow payment to DePIN Node.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Smart Contract] Settlement Transaction Hash: ${fakeTxHash}`,
+            `[${new Date().toTimeString().split(' ')[0]}] [System] Compute complete and micro-billing settled successfully! ✨`
+          ]);
+          triggerFlash('DePIN billing settled on-chain!');
+        }, 1500);
+
+      }, 1500);
+
+    }, 1200);
+  };
+
+  const resetDepinBilling = () => {
+    setDepinStatus('idle');
+    setDepinProgress(0);
+    setDepinEscrow('0.0000 ETH');
+    setDepinTxHash('');
+    setDepinLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] DePIN Agent Billing Engine reset.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to run compute transaction and micro-settlement.`
+    ]);
+  };
 
   // Kyber-Agent States
   const [kyberMsg, setKyberMsg] = useState('Transfer proprietary prompt context for financial auditing');
@@ -987,7 +1087,241 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'kyber-agent' ? (
+            {selectedProjectId === 'depin-billing' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Title & Input */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Target LLM/GraphRAG Task
+                      </label>
+                      <input 
+                        type="text" 
+                        value={depinTask}
+                        onChange={(e) => setDepinTask(e.target.value)}
+                        disabled={depinStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runDepinBilling}
+                        disabled={depinStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: depinStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: depinStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Run Billing Tx
+                      </button>
+                      <button 
+                        onClick={resetDepinBilling}
+                        disabled={depinStatus === 'voucher' || depinStatus === 'submitting' || depinStatus === 'verifying'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: (depinStatus === 'voucher' || depinStatus === 'submitting' || depinStatus === 'verifying') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  {depinStatus !== 'idle' && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {depinStatus === 'voucher' && 'Generating micro-payment voucher (ERC-4337)...'}
+                          {depinStatus === 'submitting' && 'Submitting UserOp to Alt-Mempool & Escrowing ETH...'}
+                          {depinStatus === 'verifying' && 'Executing task & verifying computation bounds...'}
+                          {depinStatus === 'settled' && 'Payment Settled & Funds Released!'}
+                        </span>
+                        <span style={{ color: 'var(--primary-color)' }}>{depinProgress}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${depinProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ height: '100%', background: 'linear-gradient(90deg, var(--accent-color), var(--primary-color))' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Visualization Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', flex: 1 }}>
+                    {/* Client Agent Console */}
+                    <div style={{ background: 'rgba(3, 7, 18, 0.3)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary-color)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Coins size={12} /> Agent-A (Client)
+                      </span>
+                      
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Escrow Balance locked:</span>
+                          <div style={{ fontSize: '0.8rem', fontWeight: 700, fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-color)', color: depinEscrow !== '0.0000 ETH' ? 'var(--warning-color)' : 'var(--text-secondary)' }}>
+                            {depinEscrow}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1 }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Lit Protocol Auth Voucher:</span>
+                          <textarea
+                            readOnly
+                            value={depinStatus !== 'idle' ? `{\n  "voucherId": "VOUCH-99482",\n  "maxEscrow": "0.0005 ETH",\n  "targetDePINNode": "0x5C2a...F7B9",\n  "signature": "0x98A1B...D8E"\n}` : 'Awaiting voucher signature...'}
+                            style={{
+                              width: '100%',
+                              flex: 1,
+                              minHeight: '80px',
+                              background: 'rgba(3, 7, 18, 0.4)',
+                              border: '1px solid var(--border-color)',
+                              padding: '0.4rem',
+                              borderRadius: '6px',
+                              color: depinStatus !== 'idle' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                              fontSize: '0.7rem',
+                              fontFamily: 'monospace',
+                              resize: 'none',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DePIN Node Console */}
+                    <div style={{ background: 'rgba(3, 7, 18, 0.3)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--accent-color)', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Cpu size={12} /> DePIN Node (Provider)
+                      </span>
+                      
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Settlement State:</span>
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: depinStatus === 'settled' ? 'var(--success-color)' : 'var(--warning-color)' }}>
+                            {depinStatus === 'idle' && '🟢 Listening'}
+                            {depinStatus === 'voucher' && '⚡ Waiting for voucher...'}
+                            {depinStatus === 'submitting' && '⚡ UserOp submitted...'}
+                            {depinStatus === 'verifying' && '⚙️ Running LLM task & generating proof...'}
+                            {depinStatus === 'settled' && '🔒 Settled & Paid'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1 }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>On-Chain Transaction:</span>
+                          <textarea
+                            readOnly
+                            value={depinTxHash ? `Block: #18429482\nTx: ${depinTxHash}\nGas Used: 128,491\nFee: 0.000004 ETH` : 'Awaiting settlement transaction...'}
+                            style={{
+                              width: '100%',
+                              flex: 1,
+                              minHeight: '80px',
+                              background: 'rgba(3, 7, 18, 0.4)',
+                              border: '1px solid var(--border-color)',
+                              padding: '0.4rem',
+                              borderRadius: '6px',
+                              color: depinTxHash ? 'var(--success-color)' : 'var(--text-secondary)',
+                              fontSize: '0.7rem',
+                              fontFamily: 'monospace',
+                              resize: 'none',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Console Log Terminal Column */}
+                <div style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Terminal size={12} /> Billing Logs
+                    </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: depinStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#c084fc'
+                    }}
+                  >
+                    {depinLogs.map((log, idx) => {
+                      let color = '#c084fc';
+                      if (log.includes('successful') || log.includes('settled') || log.includes('AUTHENTIC') || log.includes('complete')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('Signed') || log.includes('Submitting') || log.includes('Lock') || log.includes('Executing') || log.includes('verifying') || log.includes('UserOp')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Security Parameters */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>ERC-4337 Account Specs</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Entrypoint:</div>
+                        <div style={{ fontWeight: 700 }}>v0.6 (Arbitrum)</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Threshold:</div>
+                        <div style={{ fontWeight: 700 }}>3-of-5 Lit nodes</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'kyber-agent' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
