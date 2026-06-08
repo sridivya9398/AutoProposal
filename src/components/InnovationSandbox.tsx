@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'confidential-tee',
+    date: 'June 08, 2026 (Today)',
+    title: 'Confidential TEE-Agent Enclave',
+    tagline: 'Hardware-Isolated Confidential Computing and Remote Attestation for Autonomous AI Agent Workflows',
+    impactScore: 9.8,
+    techStack: ['Intel SGX', 'AWS Nitro Enclaves', 'Remote Attestation', 'Rust (Gramine)', 'ECDSA P-384'],
+    problemSolved: 'Autonomous agents handle sensitive corporate credentials, API keys, and private customer data. Traditional cloud hosting is vulnerable to host-level exploitation, memory snooping, or cloud provider insider threats.',
+    impactDescription: 'Runs agent code, prompts, and memory databases inside cryptographically isolated CPU enclaves. Users can verify a cryptographic Remote Attestation report to prove the agent hasn\'t been tampered with and is executing the exact public open-source code, enabling absolute trust in autonomous execution.',
+    architecture: [
+      'Client ──> Generates cryptographic challenge & sends to Enclave',
+      'TEE Enclave (Intel SGX/Nitro) ──> Runs local LLM reasoning & signs response with ephemeral key',
+      'TEE Hardware CPU ──> Generates cryptographic Attestation Report (SHA-256 MRENCLAVE hash)',
+      'Client ──> Verifies CPU signature and MRENCLAVE hash against Intel Attestation Service (IAS) / AWS KMS'
+    ],
+    metrics: {
+      'Enclave Boot Overhead': '240 ms (AWS Nitro)',
+      'Memory Attestation Latency': '45 ms (Local verification)',
+      'Cryptographic Strength': 'RSA-3072 / ECDSA P-384',
+      'Isolation Guarantee': 'Hardware-level DRAM Encryption'
+    }
+  },
+  {
     id: 'depin-billing',
-    date: 'June 07, 2026 (Today)',
+    date: 'June 07, 2026',
     title: 'DePIN-Agent Billing',
     tagline: 'Decentralized Agent-to-Agent Micro-billing and Resource Allocation on DePIN Networks',
     impactScore: 9.7,
@@ -194,8 +216,19 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('depin-billing');
+  const [selectedProjectId, setSelectedProjectId] = useState('confidential-tee');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // Confidential TEE States
+  const [teeTask, setTeeTask] = useState('Process confidential security questionnaire and API keys');
+  const [teeStatus, setTeeStatus] = useState<'idle' | 'booting' | 'executing' | 'attesting' | 'verified'>('idle');
+  const [teeProgress, setTeeProgress] = useState(0);
+  const [teeLogs, setTeeLogs] = useState<string[]>([
+    '[System] Confidential TEE-Agent Enclave initialized.',
+    '[System] Ready to run hardware-isolated secure reasoning transaction.'
+  ]);
+  const [teeOutput, setTeeOutput] = useState('');
+  const [teeAttestationDoc, setTeeAttestationDoc] = useState('');
 
   // DePIN Billing States
   const [depinTask, setDepinTask] = useState('Verify & Parse 500 Security Questionnaire Rows');
@@ -272,6 +305,88 @@ const InnovationSandbox = () => {
     setDepinLogs([
       `[${new Date().toTimeString().split(' ')[0]}] [System] DePIN Agent Billing Engine reset.`,
       `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to run compute transaction and micro-settlement.`
+    ]);
+  };
+
+  const runTeeSimulation = () => {
+    if (teeStatus !== 'idle') return;
+    setTeeStatus('booting');
+    setTeeProgress(10);
+    setTeeOutput('');
+    setTeeAttestationDoc('');
+    setTeeLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Initializing Trusted Execution Environment (TEE) handshake...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Platform] Allocating isolated physical cores (AWS Nitro Enclave vCPUs 2 & 3)...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Platform] Enclave memory isolated. Total size: 8192MB DRAM with AES-MME encryption.`
+    ]);
+
+    setTimeout(() => {
+      setTeeProgress(35);
+      setTeeStatus('executing');
+      setTeeLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [Enclave] Enclave OS booted. Initializing vsock bridge listener...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Enclave] Decrypting on-disk Llama-3 model parameters using hardware-bound key...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Enclave] Ingesting sensitive task context and prompt.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Enclave] Running isolated LLM generation loop...`
+      ]);
+
+      setTimeout(() => {
+        setTeeProgress(65);
+        setTeeStatus('attesting');
+        setTeeLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Enclave] Reasoning trace finished. Output response generated.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Platform] Creating SHA-256 measurement of Enclave memory (MRENCLAVE)...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Platform] Requesting remote attestation document from hardware TPM/PSP...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Platform] Generating platform certificate chain (Root CA -> intermediate -> Enclave)...`
+        ]);
+
+        setTimeout(() => {
+          setTeeProgress(100);
+          setTeeStatus('verified');
+          setTeeOutput(
+            JSON.stringify(
+              {
+                enclave_status: "confidential_verified",
+                mrenclave: "9EFA81F1A775C1C8E5868B75630656B72D437F9E01F82B93D063A41B66D44FE2",
+                mrsigner: "D8361A02EFE924B27613589B72F4AE4D6E145B1C2A5F89DE7472A528828F796E",
+                decrypted_response: {
+                  proposal_approval: true,
+                  reasoning: "Verified corporate policy 8.12. All parameters checked in-enclave. No data egress occurred.",
+                  confidential_key_used: "api_prod_token_sec_key_****"
+                }
+              },
+              null,
+              2
+            )
+          );
+          const fakeDoc = 'AWS_NITRO_ATTESTATION_DOC_' + Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join('').toUpperCase();
+          setTeeAttestationDoc(fakeDoc);
+          setTeeLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [Client] Attestation document received. Size: 1204 bytes.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Client] Validating platform signature against AWS KMS root keys...`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Client] Verifying MRENCLAVE measurement matches trusted Git commit hash...`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Client] REMOTE ATTESTATION VALID! Enclave execution integrity cryptographically guaranteed.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [System] Hardware-isolated secure inference completed successfully! ✨`
+          ]);
+          triggerFlash('TEE Attestation validated successfully!');
+        }, 1500);
+
+      }, 1500);
+
+    }, 1500);
+  };
+
+  const resetTeeSimulator = () => {
+    setTeeStatus('idle');
+    setTeeProgress(0);
+    setTeeOutput('');
+    setTeeAttestationDoc('');
+    setTeeLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Confidential TEE-Agent Enclave reset.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to run hardware-isolated secure reasoning transaction.`
     ]);
   };
 
@@ -1087,7 +1202,203 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'depin-billing' ? (
+            {selectedProjectId === 'confidential-tee' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Title & Task Input */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Confidential Enclave Task
+                      </label>
+                      <input 
+                        type="text" 
+                        value={teeTask}
+                        onChange={(e) => setTeeTask(e.target.value)}
+                        disabled={teeStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runTeeSimulation}
+                        disabled={teeStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: teeStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: teeStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Run Isolated
+                      </button>
+                      <button 
+                        onClick={resetTeeSimulator}
+                        disabled={teeStatus === 'booting' || teeStatus === 'executing'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: (teeStatus === 'booting' || teeStatus === 'executing') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  {teeStatus !== 'idle' && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {teeStatus === 'booting' && 'Booting AWS Nitro Enclave...'}
+                          {teeStatus === 'executing' && 'Executing Local LLM in Secure memory...'}
+                          {teeStatus === 'attesting' && 'Generating remote hardware attestation...'}
+                          {teeStatus === 'verified' && 'Verification Complete!'}
+                        </span>
+                        <span style={{ color: 'var(--primary-color)' }}>{teeProgress}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${teeProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ height: '100%', background: 'linear-gradient(90deg, var(--accent-color), var(--primary-color))' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Verifiable Output Display */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Enclave Decrypted Output
+                    </label>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <textarea
+                        readOnly
+                        value={teeOutput || (teeStatus === 'booting' ? 'Booting hardware enclave...' : teeStatus === 'executing' ? 'Generating LLM output inside isolated DRAM...' : teeStatus === 'attesting' ? 'Requesting attestation report from hardware root key...' : 'Outputs will be printed here after proving execution.')}
+                        style={{
+                          width: '100%',
+                          height: '220px',
+                          background: 'rgba(3, 7, 18, 0.4)',
+                          border: '1px solid var(--border-color)',
+                          padding: '1rem',
+                          borderRadius: '12px',
+                          color: teeOutput ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          fontSize: '0.85rem',
+                          fontFamily: teeOutput ? 'monospace' : 'inherit',
+                          outline: 'none',
+                          resize: 'none'
+                        }}
+                      />
+                      {teeStatus === 'verified' && (
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)', color: 'var(--success-color)', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800 }}>
+                          <ShieldCheck size={12} /> ATTESTATION VALID
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cryptographic Proof Data */}
+                  {teeAttestationDoc && (
+                    <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '12px', padding: '1rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-color)', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Remote Attestation Platform Certificate (Nitro/SGX Claims)
+                      </div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', color: 'var(--text-secondary)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                        {teeAttestationDoc}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Console Log Terminal Column */}
+                <div style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Terminal size={12} /> Hardware Enclave Console Logs
+                    </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: teeStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#c084fc'
+                    }}
+                  >
+                    {teeLogs.map((log, idx) => {
+                      let color = '#c084fc';
+                      if (log.includes('complete') || log.includes('valid') || log.includes('VALID') || log.includes('successfully') || log.includes('booted') || log.includes('integrity') || log.includes('finished')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('TPM') || log.includes('Attestation') || log.includes('MRENCLAVE') || log.includes('CPU') || log.includes('isolated') || log.includes('Isolated')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]') || log.includes('[Platform]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Proof Parameters */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Enclave Telemetry</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>TEE Platform:</div>
+                        <div style={{ fontWeight: 700 }}>AWS Nitro / SGX</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Host Egress:</div>
+                        <div style={{ fontWeight: 700, color: 'var(--error-color)' }}>Blocked (0x0)</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'depin-billing' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
