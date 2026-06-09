@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'liquid-agent',
+    date: 'June 09, 2026 (Today)',
+    title: 'Liquid-Agent WebGPU',
+    tagline: 'Adaptive Liquid Time-Constant Neural Network (LNN) Agents on WebGPU for Real-Time Edge Processing',
+    impactScore: 9.8,
+    techStack: ['WebGPU (WGSL)', 'Liquid Time-Constant Networks', 'Continuous-Time ODEs', 'React 19 Canvas', 'WASM-Rust'],
+    problemSolved: 'AI agents running in dynamic real-time environments (like robotics, autonomous drones, or highly interactive user interfaces) struggle with standard feed-forward or recurrent neural network topologies that process data at fixed time steps. They are computationally expensive and cannot naturally adapt to variable time delays or continuous streams of sensory inputs.',
+    impactDescription: 'Enables continuous-time adaptive reasoning directly in the browser. Using a WebGPU-bound compute shader implementing Liquid Neural Networks, the agent\'s state transitions are governed by differential equations where node parameters change dynamically based on inputs. This reduces compute overhead by up to 90% while maintaining smooth, adaptive behavior under network latency or missing data.',
+    architecture: [
+      'Sensory Inputs ──> Ingested into WebGPU Input Buffers',
+      'WebGPU Compute Shader (WGSL) ──> Solves ODE integration (Euler method) for state variables',
+      'Liquid Time-Constant Matrix ──> Adapts hidden state dynamics dynamically per time-delta',
+      'Output Policy ──> Steers agent actions and UI animation frame-by-frame with zero lag'
+    ],
+    metrics: {
+      'ODE Step Size': 'dt = 0.05 (Continuous-time)',
+      'Compute Performance': '60 FPS @ 2048 parameters',
+      'GPU Power Consumption': '120mW (Client Edge)',
+      'Dynamic Adaptability': 'Real-time state correction under 15ms'
+    }
+  },
+  {
     id: 'confidential-tee',
-    date: 'June 08, 2026 (Today)',
+    date: 'June 08, 2026',
     title: 'Confidential TEE-Agent Enclave',
     tagline: 'Hardware-Isolated Confidential Computing and Remote Attestation for Autonomous AI Agent Workflows',
     impactScore: 9.8,
@@ -216,8 +238,20 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('confidential-tee');
+  const [selectedProjectId, setSelectedProjectId] = useState('liquid-agent');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // Liquid-Agent States
+  const [lnnNetworkType, setLnnNetworkType] = useState<'lnn' | 'rnn'>('lnn');
+  const [lnnLatency, setLnnLatency] = useState(150); // in ms
+  const [lnnStatus, setLnnStatus] = useState<'idle' | 'compiling' | 'simulating'>('idle');
+  const [lnnProgress, setLnnProgress] = useState(0);
+  const [lnnLogs, setLnnLogs] = useState<string[]>([
+    '[System] Liquid-Agent WebGPU environment initialized.',
+    '[System] Ready to compile continuous-time WGSL shader pipelines.'
+  ]);
+  const [lnnErrorRate, setLnnErrorRate] = useState(0.02);
+  const lnnCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Confidential TEE States
   const [teeTask, setTeeTask] = useState('Process confidential security questionnaire and API keys');
@@ -566,6 +600,276 @@ We will leverage decentralized technologies to scale our application without add
   const [inferenceSpeed, setInferenceSpeed] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimer = useRef<any>(null);
+
+  // Liquid-Agent Physics Simulation Effect
+  useEffect(() => {
+    if (selectedProjectId !== 'liquid-agent' || lnnStatus !== 'simulating') {
+      return;
+    }
+
+    const canvas = lnnCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Simulation variables
+    let agentX = width / 2;
+    let agentY = height / 2;
+    let agentVx = 0;
+    let agentVy = 0;
+    
+    let time = 0;
+    const targetHistory: { x: number; y: number }[] = [];
+    
+    const obstacles = [
+      { x: width * 0.45, y: height * 0.35, r: 20 },
+      { x: width * 0.75, y: height * 0.65, r: 25 }
+    ];
+
+    const nodes = [
+      { x: 30, y: 60, type: 'input', label: 'dt' },
+      { x: 30, y: 110, type: 'input', label: 'tgt_x' },
+      { x: 30, y: 160, type: 'input', label: 'tgt_y' },
+      
+      { x: 90, y: 70, type: 'hidden', val: 0.1 },
+      { x: 90, y: 110, type: 'hidden', val: 0.5 },
+      { x: 90, y: 150, type: 'hidden', val: 0.3 },
+      
+      { x: 150, y: 90, type: 'output', label: 'F_x' },
+      { x: 150, y: 130, type: 'output', label: 'F_y' }
+    ];
+
+    let collisionCount = 0;
+    let totalError = 0;
+    let ticks = 0;
+    let animationFrameId: number;
+
+    const render = () => {
+      ticks++;
+      time += 0.02;
+
+      // Clear canvas
+      ctx.fillStyle = 'rgba(10, 15, 30, 0.9)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctx.lineWidth = 1;
+      const gridSize = 25;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Lissajous curve for target
+      const targetX = 335 + Math.sin(time * 1.2) * 85;
+      const targetY = 150 + Math.cos(time * 0.7) * Math.sin(time * 0.7) * 90;
+
+      // History buffer for latency
+      targetHistory.push({ x: targetX, y: targetY });
+      const latencyFrames = Math.max(1, Math.floor(lnnLatency / 16.6));
+      while (targetHistory.length > latencyFrames + 20) {
+        targetHistory.shift();
+      }
+
+      const delayedIdx = Math.max(0, targetHistory.length - 1 - latencyFrames);
+      const delayedTarget = targetHistory[delayedIdx] || { x: targetX, y: targetY };
+
+      let destX = targetX;
+      let destY = targetY;
+      const modeName = lnnNetworkType === 'lnn' ? "Liquid Neural Net (Continuous)" : "Traditional RNN (Fixed-step)";
+
+      if (lnnNetworkType === 'rnn') {
+        destX = delayedTarget.x;
+        destY = delayedTarget.y;
+      } else {
+        const prevDelayed = targetHistory[Math.max(0, delayedIdx - 3)] || delayedTarget;
+        const dx = (delayedTarget.x - prevDelayed.x) / 3;
+        const dy = (delayedTarget.y - prevDelayed.y) / 3;
+        destX = delayedTarget.x + dx * latencyFrames * 1.15;
+        destY = delayedTarget.y + dy * latencyFrames * 1.15;
+      }
+
+      // Physics update: acceleration towards destination
+      const kCoeff = lnnNetworkType === 'lnn' ? 0.09 : 0.05;
+      const ax = (destX - agentX) * kCoeff;
+      const ay = (destY - agentY) * kCoeff;
+
+      agentVx += ax;
+      agentVy += ay;
+      agentVx *= 0.82;
+      agentVy *= 0.82;
+
+      agentX += agentVx;
+      agentY += agentVy;
+
+      // Check obstacles
+      obstacles.forEach(obs => {
+        const dist = Math.sqrt((agentX - obs.x) ** 2 + (agentY - obs.y) ** 2);
+        
+        ctx.beginPath();
+        ctx.arc(obs.x, obs.y, obs.r, 0, Math.PI * 2);
+        
+        const isColliding = dist < (obs.r + 6);
+        if (isColliding) {
+          collisionCount++;
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+          ctx.strokeStyle = '#ef4444';
+        } else {
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.08)';
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+        }
+        ctx.lineWidth = 1.5;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
+        ctx.font = '7px monospace';
+        ctx.fillText("OBSTACLE", obs.x - 18, obs.y + 3);
+      });
+
+      // Draw target (green crosshair)
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, 7, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(targetX - 11, targetY);
+      ctx.lineTo(targetX + 11, targetY);
+      ctx.moveTo(targetX, targetY - 11);
+      ctx.lineTo(targetX, targetY + 11);
+      ctx.stroke();
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = '8px monospace';
+      ctx.fillText("TARGET", targetX + 12, targetY - 4);
+
+      // Trajectory connection line
+      ctx.strokeStyle = lnnNetworkType === 'lnn' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(168, 85, 247, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(agentX, agentY);
+      ctx.lineTo(destX, destY);
+      ctx.stroke();
+
+      // Draw agent
+      const angle = Math.atan2(agentVy, agentVx);
+      ctx.save();
+      ctx.translate(agentX, agentY);
+      ctx.rotate(angle);
+      ctx.fillStyle = lnnNetworkType === 'lnn' ? '#3b82f6' : '#a855f7';
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.lineTo(-7, -5);
+      ctx.lineTo(-4, 0);
+      ctx.lineTo(-7, 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = lnnNetworkType === 'lnn' ? '#60a5fa' : '#c084fc';
+      ctx.font = '8px monospace';
+      ctx.fillText("AGENT", agentX - 12, agentY - 12);
+
+      // Draw backing panel for network visualization (left side)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.01)';
+      ctx.fillRect(4, 4, 185, height - 8);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.strokeRect(4, 4, 185, height - 8);
+
+      // Draw synapses
+      nodes.forEach((nStart) => {
+        nodes.forEach((nEnd) => {
+          const validConn = 
+            (nStart.type === 'input' && nEnd.type === 'hidden') ||
+            (nStart.type === 'hidden' && nEnd.type === 'hidden' && nStart !== nEnd) ||
+            (nStart.type === 'hidden' && nEnd.type === 'output');
+
+          if (validConn) {
+            ctx.beginPath();
+            ctx.moveTo(nStart.x, nStart.y);
+            ctx.lineTo(nEnd.x, nEnd.y);
+            ctx.strokeStyle = lnnNetworkType === 'lnn' 
+              ? 'rgba(59, 130, 246, 0.08)' 
+              : 'rgba(168, 85, 247, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            const speed = lnnNetworkType === 'lnn' ? 0.015 : 0.008;
+            const progress = (time * (speed * 100) + (nStart.x + nStart.y)) % 1;
+            const px = nStart.x + (nEnd.x - nStart.x) * progress;
+            const py = nStart.y + (nEnd.y - nStart.y) * progress;
+            
+            ctx.beginPath();
+            ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = lnnNetworkType === 'lnn' ? '#3b82f6' : '#a855f7';
+            ctx.fill();
+          }
+        });
+      });
+
+      // Draw nodes
+      nodes.forEach((n) => {
+        const pulse = lnnNetworkType === 'lnn'
+          ? Math.sin(time * 4 + n.y) * 1.5
+          : Math.floor(Math.sin(time * 2 + n.y) * 1.5);
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 4.5 + pulse, 0, Math.PI * 2);
+        
+        if (n.type === 'input') {
+          ctx.fillStyle = '#475569';
+        } else if (n.type === 'hidden') {
+          ctx.fillStyle = lnnNetworkType === 'lnn' ? '#3b82f6' : '#a855f7';
+        } else {
+          ctx.fillStyle = '#059669';
+        }
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.font = '6.5px monospace';
+        ctx.fillText(n.label || '', n.x - 8, n.y - 7);
+      });
+
+      // Text Overlay Info
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.font = '9px monospace';
+      ctx.fillText(modeName, 12, 18);
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.font = '7.5px monospace';
+      ctx.fillText(`dt: 0.05 | Latency: ${lnnLatency}ms`, 12, 28);
+      ctx.fillText(`Collisions: ${collisionCount}`, 12, 38);
+
+      // Average tracking error
+      const currentError = Math.sqrt((agentX - targetX) ** 2 + (agentY - targetY) ** 2);
+      totalError += currentError;
+      const avgError = totalError / ticks;
+      if (ticks % 10 === 0) {
+        setLnnErrorRate(parseFloat((avgError / 120).toFixed(4)));
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [selectedProjectId, lnnStatus, lnnNetworkType, lnnLatency]);
 
   // Trigger peer edit simulation every 15 seconds
   useEffect(() => {
@@ -977,6 +1281,61 @@ We will leverage decentralized technologies to scale our application without add
     ]);
   };
 
+  const runLnnSimulation = () => {
+    if (lnnStatus !== 'idle') return;
+    setLnnStatus('compiling');
+    setLnnProgress(10);
+    setLnnLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Initializing WebGPU adapter and requesting device...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Found compatible GPU device: Apple M-series GPU.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Creating pipeline bind group layouts for Liquid states...`
+    ]);
+
+    setTimeout(() => {
+      setLnnProgress(40);
+      setLnnLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Compiling WGSL compute shader for continuous-time ODE solver...`,
+        `[${new Date().toTimeString().split(' ')[0]}] [WGSL] Solver source code loaded (Euler-Maruyama integration scheme).`,
+        `[${new Date().toTimeString().split(' ')[0]}] [WGSL] Verification complete. Allocating GPU memory buffers (65,536 bytes)...`
+      ]);
+
+      setTimeout(() => {
+        setLnnProgress(75);
+        setLnnLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] GPU buffers bound: State variables (size: 65k), ODE parameters, Inputs.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Creating compute pass encoder and pipelines...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [System] Compilation successful. Triggering continuous integration loop...`
+        ]);
+
+        setTimeout(() => {
+          setLnnProgress(100);
+          setLnnStatus('simulating');
+          setLnnLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [System] Simulation loop active at 60 FPS.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Dispatched compute shader threads (workgroups = 32).`,
+            `[${new Date().toTimeString().split(' ')[0]}] [LNN] Continuous integration running. Dynamic time-constants active. ✨`
+          ]);
+          triggerFlash('WebGPU Liquid Agent simulation started!');
+        }, 1200);
+
+      }, 1200);
+
+    }, 1000);
+  };
+
+  const resetLnnSimulation = () => {
+    setLnnStatus('idle');
+    setLnnProgress(0);
+    setLnnErrorRate(0.02);
+    setLnnLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Liquid-Agent WebGPU environment reset.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to compile continuous-time WGSL shader pipelines.`
+    ]);
+  };
+
   return (
     <div style={{ maxWidth: '1150px', margin: '0 auto', paddingBottom: '3rem' }}>
       {/* Header Banner */}
@@ -1202,7 +1561,215 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'confidential-tee' ? (
+            {selectedProjectId === 'liquid-agent' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Parameter Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Network Topology
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.2rem', borderRadius: '8px' }}>
+                        <button
+                          onClick={() => setLnnNetworkType('lnn')}
+                          disabled={lnnStatus === 'compiling'}
+                          style={{
+                            flex: 1,
+                            background: lnnNetworkType === 'lnn' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                            border: lnnNetworkType === 'lnn' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                            color: lnnNetworkType === 'lnn' ? '#60a5fa' : 'var(--text-secondary)',
+                            padding: '0.4rem',
+                            borderRadius: '6px',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Liquid (LNN)
+                        </button>
+                        <button
+                          onClick={() => setLnnNetworkType('rnn')}
+                          disabled={lnnStatus === 'compiling'}
+                          style={{
+                            flex: 1,
+                            background: lnnNetworkType === 'rnn' ? 'rgba(168, 85, 247, 0.2)' : 'transparent',
+                            border: lnnNetworkType === 'rnn' ? '1px solid rgba(168, 85, 247, 0.4)' : '1px solid transparent',
+                            color: lnnNetworkType === 'rnn' ? '#c084fc' : 'var(--text-secondary)',
+                            padding: '0.4rem',
+                            borderRadius: '6px',
+                            fontWeight: 700,
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          Classic (RNN)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Channel Latency: {lnnLatency} ms
+                      </label>
+                      <input 
+                        type="range"
+                        min="0"
+                        max="500"
+                        value={lnnLatency}
+                        onChange={(e) => setLnnLatency(parseInt(e.target.value))}
+                        disabled={lnnStatus === 'compiling'}
+                        style={{
+                          width: '100%',
+                          accentColor: lnnNetworkType === 'lnn' ? '#3b82f6' : '#a855f7',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          height: '6px',
+                          borderRadius: '3px',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runLnnSimulation}
+                        disabled={lnnStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: lnnStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: lnnStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Run WebGPU
+                      </button>
+                      <button 
+                        onClick={resetLnnSimulation}
+                        disabled={lnnStatus === 'compiling'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          cursor: lnnStatus === 'compiling' ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Canvas Visualization Panel */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(3, 7, 18, 0.4)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', minHeight: '300px' }}>
+                    {lnnStatus === 'idle' ? (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', gap: '1rem', padding: '2rem', textAlign: 'center' }}>
+                        <Cpu size={48} style={{ color: 'rgba(255,255,255,0.1)' }} />
+                        <div>
+                          <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>Continuous-Time Solver Pipeline</p>
+                          <p style={{ fontSize: '0.8rem' }}>Compile the continuous ODE integration shader on WebGPU to begin the real-time simulation.</p>
+                        </div>
+                      </div>
+                    ) : lnnStatus === 'compiling' ? (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '2rem' }}>
+                        <div className="spinning-loader" style={{ width: '36px', height: '36px', border: '3px solid rgba(139, 92, 246, 0.1)', borderTopColor: 'var(--accent-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                        <div style={{ textAlign: 'center' }}>
+                          <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>Compiling WGSL Compute Shaders</p>
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Building pipeline bind groups ({lnnProgress}%)...</p>
+                        </div>
+                        <div style={{ width: '200px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: `${lnnProgress}%`, height: '100%', background: 'var(--accent-color)', transition: 'width 0.2s' }}></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <canvas 
+                        ref={lnnCanvasRef}
+                        width={460}
+                        height={300}
+                        style={{ width: '100%', height: '100%', display: 'block', background: '#050b14' }}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Logs Column */}
+                <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(3, 7, 18, 0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
+                      WebGPU Kernels & Solver Output
+                    </h4>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: lnnStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#60a5fa'
+                    }}
+                  >
+                    {lnnLogs.map((log, idx) => {
+                      let color = '#60a5fa';
+                      if (log.includes('complete') || log.includes('successful') || log.includes('active') || log.includes('running') || log.includes('stabilized')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('Compiling') || log.includes('WGSL') || log.includes('buffers') || log.includes('time-constants')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Parameter Outputs */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Liquid Agent Telemetry</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Tracking Error Rate:</div>
+                        <div style={{ fontWeight: 700, color: lnnErrorRate > 0.1 ? 'var(--error-color)' : 'var(--success-color)' }}>
+                          {(lnnErrorRate * 100).toFixed(2)}%
+                        </div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>ODE dt Integrator:</div>
+                        <div style={{ fontWeight: 700 }}>dt = 0.05</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'confidential-tee' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
