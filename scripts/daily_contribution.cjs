@@ -4,7 +4,10 @@ const path = require('path');
 async function run() {
   const logFile = path.join(process.cwd(), 'DAILY_LOG.md');
   const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${year}-${month}-${day}`;
   const timeStr = now.toTimeString().split(' ')[0];
 
   // 1. Get Project Stats
