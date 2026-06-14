@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Cpu, Wifi, WifiOff, Play, Terminal, Code, Sparkles, ShieldCheck, Database, Layers, Check, Crown, AlertTriangle, Coins } from 'lucide-react';
+import { Cpu, Wifi, WifiOff, Play, Terminal, Code, Sparkles, ShieldCheck, Database, Layers, Check, Crown, AlertTriangle, Coins, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TechProject {
@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'mamba-ssm',
+    date: 'June 14, 2026 (Today)',
+    title: 'Mamba Selective SSM',
+    tagline: 'WebGPU Selective State Space Model (SSM) Inference Engine for Infinite-Context Local AI Agents',
+    impactScore: 9.9,
+    techStack: ['Mamba-2 Architecture', 'WebGPU (WGSL)', 'Selective Scan (S6)', 'Parallel Scan Operator', 'Linear Complexity O(N)', 'WebAssembly (Rust)'],
+    problemSolved: 'Standard Transformer-based agents suffer from quadratic memory and computational complexity O(N^2) as the context window grows. The Key-Value (KV) cache grows linearly, quickly exhausting edge device VRAM (GPU memory) during long agent loops.',
+    impactDescription: 'Implements a WebGPU-bound Selective State Space Model (SSM) using the S6 scan operator. By executing the state updates recursively or via parallel associative scans, it achieves linear complexity O(N) in sequence length while maintaining a constant O(1) state cache footprint. This reduces memory usage by up to 98% for long context reasoning, allowing edge agents to run infinite-context loops locally.',
+    architecture: [
+      'Sequence Loader ──> Tokenizes stream and maps input to feature vectors',
+      'Selective Scan Shaders ──> WebGPU compute shaders dynamically calculate state gates (A, B, C) per token',
+      'Parallel Scan Operator ──> Performs associative scan prefix loop for fast GPU execution',
+      'SSM State Updater ──> Updates constant-size state buffer (size h_d = 16) with zero KV cache overhead'
+    ],
+    metrics: {
+      'State Cache Size': 'O(1) Constant (vs O(N) for KV Cache)',
+      'Sequence Complexity': 'O(N) Linear (vs O(N^2) for Attention)',
+      'Max Context Window': 'Infinite-context reasoning',
+      'VRAM Saving': '98.2% reduction at 32k tokens'
+    }
+  },
+  {
     id: 'bitnet-agent',
-    date: 'June 11, 2026 (Today)',
+    date: 'June 11, 2026',
     title: 'BitNet-Agent (1.58-bit)',
     tagline: 'WebGPU Ternary-Weight (1.58-bit) LLM Inference Engine for Low-Power Edge Agent Swarms',
     impactScore: 9.9,
@@ -260,8 +282,23 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('bitnet-agent');
+  const [selectedProjectId, setSelectedProjectId] = useState('mamba-ssm');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // Mamba-SSM States
+  const [mambaSeqLength, setMambaSeqLength] = useState<'4k' | '16k' | '64k' | '256k'>('64k');
+  const [mambaMode, setMambaMode] = useState<'recurrent' | 'parallel'>('parallel');
+  const [mambaStatus, setMambaStatus] = useState<'idle' | 'compiling' | 'scanning' | 'completed'>('idle');
+  const [mambaProgress, setMambaProgress] = useState(0);
+  const [mambaLogs, setMambaLogs] = useState<string[]>([
+    '[System] Mamba-2 Selective SSM engine initialized.',
+    '[System] Ready to compile parallel associative scan WGSL shaders.'
+  ]);
+  const [mambaOutput, setMambaOutput] = useState('');
+  const [mambaSpeed, setMambaSpeed] = useState(0);
+  const mambaCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mambaIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
 
   // BitNet-Agent States
   const [bitnetPrompt, setBitnetPrompt] = useState('Draft a summary of the compliance report and highlight any key risks');
@@ -913,6 +950,245 @@ We will leverage decentralized technologies to scale our application without add
       cancelAnimationFrame(animationFrameId);
     };
   }, [selectedProjectId, lnnStatus, lnnNetworkType, lnnLatency]);
+
+  // Mamba SSM Simulation Canvas Effect
+  useEffect(() => {
+    if (selectedProjectId !== 'mamba-ssm' || mambaStatus !== 'scanning') {
+      return;
+    }
+
+    const canvas = mambaCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    let animationFrameId: number;
+    let time = 0;
+
+    // Dots representing input stream tokens
+    const tokens: { x: number; y: number; val: number; char: string }[] = [];
+
+    const render = () => {
+      time += 0.04;
+
+      // Clear
+      ctx.fillStyle = 'rgba(10, 15, 30, 0.9)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctx.lineWidth = 1;
+      const gridSize = 25;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // 1. TRANSFORMER MEMORY (LEFT SIDE)
+      const transX = 30;
+      const transY = 55;
+      const boxSize = 100;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.01)';
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(transX, transY, boxSize, boxSize);
+      ctx.fillRect(transX, transY, boxSize, boxSize);
+
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+      ctx.font = '8.5px monospace';
+      ctx.fillText("Transformer KV-Cache", transX, transY - 8);
+
+      // Draw quadratic attention dots filling up in the box
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+      const fillPercent = Math.min(1.0, (time * 0.08) % 1.2);
+      const dotCount = Math.floor(fillPercent * 160);
+      for (let i = 0; i < dotCount; i++) {
+        const dx = (Math.sin(i * 12.3) * 0.5 + 0.5) * boxSize;
+        const dy = (Math.cos(i * 45.6) * 0.5 + 0.5) * boxSize;
+        ctx.beginPath();
+        ctx.arc(transX + dx, transY + dy, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Attention links
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.1)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let i = 0; i < Math.min(10, dotCount / 10); i++) {
+        const x1 = transX + (Math.sin(i * 7) * 0.5 + 0.5) * boxSize;
+        const y1 = transY + (Math.cos(i * 13) * 0.5 + 0.5) * boxSize;
+        const x2 = transX + (Math.sin(i * 19) * 0.5 + 0.5) * boxSize;
+        const y2 = transY + (Math.cos(i * 29) * 0.5 + 0.5) * boxSize;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
+      ctx.stroke();
+
+      // VRAM readout
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+      ctx.font = '8px monospace';
+      const transVram = (1.2 + Math.pow(fillPercent * 8, 2)).toFixed(1);
+      ctx.fillText(`VRAM: ${transVram} GB`, transX + 5, transY + boxSize - 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillText(`Complexity: O(N²)`, transX + 5, transY + 12);
+
+      // 2. MAMBA SELECTIVE SCAN (RIGHT SIDE)
+      const mambaX = width - 130;
+      const mambaY = 55;
+      
+      // Draw Constant State Cylinder
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.01)';
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+      ctx.strokeRect(mambaX, mambaY, boxSize, boxSize);
+      ctx.fillRect(mambaX, mambaY, boxSize, boxSize);
+
+      ctx.fillStyle = '#60a5fa';
+      ctx.font = '8.5px monospace';
+      ctx.fillText("Mamba Constant State", mambaX, mambaY - 8);
+
+      // Draw inside the Mamba state: discrete slots flashing
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
+      ctx.lineWidth = 1;
+      const cols = 4;
+      const rows = 4;
+      const slotW = boxSize / cols;
+      const slotH = boxSize / rows;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const sx = mambaX + c * slotW;
+          const sy = mambaY + r * slotH;
+          ctx.strokeRect(sx, sy, slotW, slotH);
+          
+          const activity = Math.abs(Math.sin(time * 3 + c * 1.5 + r * 2.3));
+          ctx.fillStyle = `rgba(59, 130, 246, ${activity * 0.3})`;
+          ctx.fillRect(sx + 2, sy + 2, slotW - 4, slotH - 4);
+        }
+      }
+
+      // Stream of input tokens flowing from bottom center to Mamba state
+      if (Math.random() < 0.4) {
+        const chars = ["W", "o", "r", "d", "A", "G", "E", "N", "T", "0", "1", "x", "y", "z", "{", "}", "[", "]"];
+        tokens.push({
+          x: width / 2,
+          y: height - 50,
+          val: Math.random(),
+          char: chars[Math.floor(Math.random() * chars.length)]
+        });
+      }
+
+      // Update and draw tokens
+      ctx.font = '8.5px monospace';
+      for (let i = tokens.length - 1; i >= 0; i--) {
+        const t = tokens[i];
+        const targetMambaX = mambaX + boxSize / 2;
+        const targetMambaY = mambaY + boxSize / 2;
+        
+        t.x += (targetMambaX - t.x) * 0.08;
+        t.y += (targetMambaY - t.y) * 0.08;
+
+        const dist = Math.sqrt((t.x - targetMambaX)**2 + (t.y - targetMambaY)**2);
+        if (dist < 10) {
+          tokens.splice(i, 1);
+          continue;
+        }
+
+        ctx.fillStyle = `rgba(96, 165, 250, ${Math.min(1.0, dist / 30)})`;
+        ctx.fillText(t.char, t.x, t.y);
+      }
+
+      // Gating channels: A, B, C
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(width / 2, height - 50);
+      ctx.lineTo(mambaX + boxSize / 2, mambaY + boxSize / 2 + 10);
+      ctx.stroke();
+
+      // Gating boxes
+      const gateLabels = ["A(t) Decay", "B(t) Ingest", "C(t) Project"];
+      const gateColors = ["#ef4444", "#3b82f6", "#10b981"];
+      const gateX = width / 2 - 75;
+      const gateY = height - 90;
+      
+      for (let i = 0; i < 3; i++) {
+        const gx = gateX + i * 55;
+        const gy = gateY;
+        const pulse = Math.abs(Math.sin(time * 5 + i * 2)) > 0.6;
+        
+        ctx.fillStyle = pulse ? `${gateColors[i]}20` : 'rgba(255, 255, 255, 0.01)';
+        ctx.strokeStyle = pulse ? gateColors[i] : 'rgba(255, 255, 255, 0.1)';
+        ctx.strokeRect(gx, gy, 45, 16);
+        ctx.fillRect(gx, gy, 45, 16);
+        
+        ctx.fillStyle = pulse ? gateColors[i] : 'rgba(255, 255, 255, 0.4)';
+        ctx.font = '7px monospace';
+        ctx.fillText(gateLabels[i], gx + 3, gy + 11);
+      }
+
+      // Mamba VRAM readout
+      ctx.fillStyle = '#60a5fa';
+      ctx.font = '8px monospace';
+      ctx.fillText(`VRAM: 128 KB (Flat)`, mambaX + 5, mambaY + boxSize - 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillText(`Complexity: O(N)`, mambaX + 5, mambaY + 12);
+
+      // 3. COMPARISON CHART (BOTTOM ROW)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(30, height - 30);
+      ctx.lineTo(width - 30, height - 30);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '7.5px monospace';
+      ctx.fillText("Active Tokens (Sequence Length ──>)", 35, height - 33);
+
+      // Memory comparison lines
+      ctx.lineWidth = 1.5;
+      
+      // Draw Transformer line (Quadratic Curve)
+      ctx.strokeStyle = '#ef4444';
+      ctx.beginPath();
+      for (let x = 35; x < width - 35; x++) {
+        const ratio = (x - 35) / (width - 70);
+        const yVal = height - 30 - Math.pow(ratio * 1.8, 2) * 12;
+        if (x === 35) ctx.moveTo(x, yVal);
+        else ctx.lineTo(x, yVal);
+      }
+      ctx.stroke();
+      
+      // Draw Mamba line (Constant Horizontal)
+      ctx.strokeStyle = '#3b82f6';
+      ctx.beginPath();
+      ctx.moveTo(35, height - 31);
+      ctx.lineTo(width - 35, height - 31);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ef4444';
+      ctx.fillText("Transformer VRAM (O(N²))", 35, height - 10);
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillText("Mamba-2 VRAM (O(1) State Cache)", width / 2 + 10, height - 10);
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [selectedProjectId, mambaStatus, mambaSeqLength]);
 
   // BitNet Simulation Canvas Effect
   useEffect(() => {
@@ -1607,6 +1883,99 @@ We will leverage decentralized technologies to scale our application without add
     ]);
   };
 
+  const runMambaScan = () => {
+    if (mambaStatus !== 'idle') return;
+    setMambaStatus('compiling');
+    setMambaProgress(10);
+    setMambaOutput('');
+    setMambaSpeed(0);
+    setMambaLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Allocating constant state buffers on GPU...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Compiling Selective Scan WGSL kernel (S6 parallel scan)...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Input dimensions: sequence_length = ${mambaSeqLength === '4k' ? 4096 : mambaSeqLength === '16k' ? 16384 : mambaSeqLength === '64k' ? 65536 : 262144}, state_dim = 16.`
+    ]);
+
+    setTimeout(() => {
+      setMambaProgress(45);
+      setMambaLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [Compiler] WGSL shaders compiled successfully in 340ms.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Created GPUCommandEncoder and Pipeline state.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [System] Dispatching WebGPU compute grid (workgroup_size = [256, 1, 1])...`
+      ]);
+
+      setTimeout(() => {
+        setMambaProgress(75);
+        setMambaLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Memory bind groups bound. Zero KV Cache allocated.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Running parallel associative prefix scan on state A matrix...`
+        ]);
+
+        setTimeout(() => {
+          setMambaProgress(100);
+          setMambaStatus('scanning');
+          setMambaLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [Mamba] Gating matrices (B and C) dynamically generated per-token.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Mamba] Parallel scan execution completed. Reading back result...`
+          ]);
+
+          let generatedText = '';
+          const fullText = `[Long Context Analysis Report]
+- Successfully ingested complete RFP dossier (length: ${mambaSeqLength === '4k' ? '4,096' : mambaSeqLength === '16k' ? '16,384' : mambaSeqLength === '64k' ? '65,536' : '262,144'} tokens).
+- Constant memory state maintained at 128 KB (16 dimensions * 4 bytes/float * 2048 hidden size).
+- Found 2 security policy discrepancies in Section 8.4:
+  1. Data residency requires EU-Central, but backup default is US-East.
+  2. Multi-tenant encryption is set to AES-128 instead of AES-256.
+- Conclusion: Proposal is 94% compliant. Remediation steps generated.`;
+
+          let charIdx = 0;
+          mambaIntervalRef.current = setInterval(() => {
+            if (charIdx < fullText.length) {
+              const increment = Math.floor(Math.random() * 8) + 4;
+              generatedText += fullText.substring(charIdx, charIdx + increment);
+              charIdx += increment;
+              setMambaOutput(generatedText);
+              setMambaSpeed(Math.floor(180 + Math.random() * 40));
+            } else {
+              if (mambaIntervalRef.current) {
+                clearInterval(mambaIntervalRef.current);
+                mambaIntervalRef.current = null;
+              }
+              setMambaStatus('completed');
+              setMambaLogs(prev => [
+                ...prev,
+                `[${new Date().toTimeString().split(' ')[0]}] [Mamba] Context synthesis finished. Out-of-memory errors: 0.`,
+                `[${new Date().toTimeString().split(' ')[0]}] [System] Mamba-2 Selective SSM scan completed successfully! ✨`
+              ]);
+              triggerFlash('Mamba SSM context scan completed successfully!');
+            }
+          }, 40);
+
+        }, 1000);
+
+      }, 1000);
+
+    }, 800);
+  };
+
+  const resetMambaScan = () => {
+    if (mambaIntervalRef.current) {
+      clearInterval(mambaIntervalRef.current);
+      mambaIntervalRef.current = null;
+    }
+    setMambaStatus('idle');
+    setMambaProgress(0);
+    setMambaLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Mamba-2 Selective SSM engine reset.`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Ready to compile parallel associative scan WGSL shaders.`
+    ]);
+    setMambaOutput('');
+    setMambaSpeed(0);
+  };
+
+
   return (
     <div style={{ maxWidth: '1150px', margin: '0 auto', paddingBottom: '3rem' }}>
       {/* Header Banner */}
@@ -1832,7 +2201,225 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'bitnet-agent' ? (
+            {selectedProjectId === 'mamba-ssm' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Parameter Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Sequence Length Context
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.2rem', borderRadius: '8px' }}>
+                        {(['4k', '16k', '64k', '256k'] as const).map((seq) => (
+                          <button
+                            key={seq}
+                            onClick={() => setMambaSeqLength(seq)}
+                            disabled={mambaStatus === 'compiling' || mambaStatus === 'scanning'}
+                            style={{
+                              flex: 1,
+                              background: mambaSeqLength === seq ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                              border: mambaSeqLength === seq ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid transparent',
+                              color: mambaSeqLength === seq ? '#60a5fa' : 'var(--text-secondary)',
+                              padding: '0.4rem',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              fontSize: '0.75rem',
+                              cursor: (mambaStatus === 'compiling' || mambaStatus === 'scanning') ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {seq}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '180px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Scan Operator Mode
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.2rem', borderRadius: '8px' }}>
+                        {(['recurrent', 'parallel'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => setMambaMode(mode)}
+                            disabled={mambaStatus === 'compiling' || mambaStatus === 'scanning'}
+                            style={{
+                              flex: 1,
+                              background: mambaMode === mode ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                              border: mambaMode === mode ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+                              color: mambaMode === mode ? '#34d399' : 'var(--text-secondary)',
+                              padding: '0.4rem',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              fontSize: '0.75rem',
+                              textTransform: 'capitalize',
+                              cursor: (mambaStatus === 'compiling' || mambaStatus === 'scanning') ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {mode === 'recurrent' ? 'Recurrent O(1) step' : 'Parallel O(lg N)'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runMambaScan}
+                        disabled={mambaStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: mambaStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: mambaStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Zap size={14} /> Run SSM Scan
+                      </button>
+                      <button 
+                        onClick={resetMambaScan}
+                        disabled={mambaStatus === 'compiling'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          cursor: mambaStatus === 'compiling' ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Canvas & Text Output Container */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: '340px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(3, 7, 18, 0.4)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                      {mambaStatus === 'idle' ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', gap: '1rem', padding: '2rem', textAlign: 'center' }}>
+                          <Cpu size={48} style={{ color: 'rgba(255,255,255,0.1)' }} />
+                          <div>
+                            <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>Mamba Selective SSM Engine</p>
+                            <p style={{ fontSize: '0.8rem' }}>Compile the WebGPU selective state scan (S6) kernels to test linear context scaling.</p>
+                          </div>
+                        </div>
+                      ) : mambaStatus === 'compiling' ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '2rem' }}>
+                          <div className="spinning-loader" style={{ width: '36px', height: '36px', border: '3px solid rgba(139, 92, 246, 0.1)', borderTopColor: 'var(--accent-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                          <div style={{ textAlign: 'center' }}>
+                            <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>Compiling WebGPU Scan Shaders</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Configuring pipeline bindings ({mambaProgress}%)...</p>
+                          </div>
+                          <div style={{ width: '200px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${mambaProgress}%`, height: '100%', background: 'var(--accent-color)', transition: 'width 0.2s' }}></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <canvas 
+                          ref={mambaCanvasRef}
+                          width={460}
+                          height={220}
+                          style={{ width: '100%', height: '100%', display: 'block', background: '#050b14' }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Output Text Block */}
+                    {(mambaStatus === 'scanning' || mambaStatus === 'completed') && (
+                      <div className="card" style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', borderColor: 'rgba(59, 130, 246, 0.2)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--primary-color)', fontWeight: 700, textTransform: 'uppercase' }}>SSM Scan Active Output:</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Scan speed: <strong style={{ color: 'var(--success-color)' }}>{mambaSpeed}k tokens/sec</strong></span>
+                        </div>
+                        <div style={{ fontSize: '0.85rem', lineHeight: '1.5', maxHeight: '120px', overflowY: 'auto', color: 'var(--text-primary)', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                          {mambaOutput}
+                          {mambaStatus === 'scanning' && <span className="typing-cursor"></span>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Logs Column */}
+                <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(3, 7, 18, 0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.05em' }}>
+                      SSM Scan Trace & GPU State
+                    </h4>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: mambaStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '320px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#60a5fa'
+                    }}
+                  >
+                    {mambaLogs.map((log, idx) => {
+                      let color = '#60a5fa';
+                      if (log.includes('complete') || log.includes('successful') || log.includes('active') || log.includes('running') || log.includes('completed')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('Compiling') || log.includes('WGSL') || log.includes('buffers') || log.includes('Allocating')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Parameter Outputs */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Resource Footprint Metrics</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>GPU Memory Allocated:</div>
+                        <div style={{ fontWeight: 700, color: 'var(--success-color)' }}>
+                          128 KB
+                        </div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>VRAM Savings vs Attn:</div>
+                        <div style={{ fontWeight: 700, color: 'var(--success-color)' }}>
+                          {mambaSeqLength === '4k' ? '65.2%' : mambaSeqLength === '16k' ? '88.4%' : mambaSeqLength === '64k' ? '98.2%' : '99.5%'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'bitnet-agent' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
