@@ -74,12 +74,12 @@ else
   if [ $PUSH_STATUS -eq 0 ]; then
     echo "Daily contribution pushed successfully." >> "$LOG_FILE"
     
-    # Sync DAILY_LOG.md back to the active repo if it exists and is not dirty
+    # Sync the active repo by pulling the latest commit from origin main
     if [ -d "$ACTIVE_REPO" ]; then
       cd "$ACTIVE_REPO" || exit 1
       if git diff --quiet DAILY_LOG.md; then
-         echo "Syncing updated DAILY_LOG.md back to active workspace." >> "$LOG_FILE"
-         cp "$CRON_REPO/DAILY_LOG.md" "$ACTIVE_REPO/DAILY_LOG.md"
+         echo "Syncing active workspace by pulling latest changes..." >> "$LOG_FILE"
+         git pull origin main >> "$LOG_FILE" 2>&1
       fi
     fi
   else
