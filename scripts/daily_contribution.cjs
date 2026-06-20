@@ -51,7 +51,12 @@ async function run() {
     "Don't comment bad code—rewrite it.",
     "First, solve the problem. Then, write the code.",
     "Optimize for readability, not just performance.",
-    "A language that doesn't affect the way you think about programming, is not worth knowing."
+    "A language that doesn't affect the way you think about programming, is not worth knowing.",
+    "Before software can be reusable it first has to be usable.",
+    "Make it work, make it right, make it fast.",
+    "Software is a great combination between artistry and engineering.",
+    "Complexity is the enemy of reliability.",
+    "Testing shows the presence, not the absence of bugs."
   ];
   const tip = tips[Math.floor(Math.random() * tips.length)];
 
