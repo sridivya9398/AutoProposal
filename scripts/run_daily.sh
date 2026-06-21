@@ -59,15 +59,12 @@ git pull origin main >> "$LOG_FILE" 2>&1
 echo "Running daily contribution node script..." >> "$LOG_FILE"
 node scripts/daily_contribution.cjs >> "$LOG_FILE" 2>&1
 
-# Check if there are changes to commit
-if git diff --quiet DAILY_LOG.md; then
-  echo "No new changes to DAILY_LOG.md (today's entry might already exist)." >> "$LOG_FILE"
-else
-  # Commit and push
-  git add DAILY_LOG.md >> "$LOG_FILE" 2>&1
-  git commit -m "docs: local daily pulse update 🚀" >> "$LOG_FILE" 2>&1
-  
-  echo "Pushing changes..." >> "$LOG_FILE"
+# Check if there are unpushed commits in main branch
+LOCAL_HASH=$(git rev-parse HEAD)
+REMOTE_HASH=$(git rev-parse origin/main)
+
+if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
+  echo "Found unpushed commits. Pushing changes..." >> "$LOG_FILE"
   git push origin main >> "$LOG_FILE" 2>&1
   PUSH_STATUS=$?
   
@@ -77,14 +74,14 @@ else
     # Sync the active repo by pulling the latest commit from origin main
     if [ -d "$ACTIVE_REPO" ]; then
       cd "$ACTIVE_REPO" || exit 1
-      if git diff --quiet DAILY_LOG.md; then
-         echo "Syncing active workspace by pulling latest changes..." >> "$LOG_FILE"
-         git pull origin main >> "$LOG_FILE" 2>&1
-      fi
+      echo "Syncing active workspace by pulling latest changes..." >> "$LOG_FILE"
+      git pull origin main >> "$LOG_FILE" 2>&1
     fi
   else
     echo "Git push failed in isolated repo." >> "$LOG_FILE"
   fi
+else
+  echo "No new commits to push." >> "$LOG_FILE"
 fi
 
 echo "=== Daily Contribution End: $(date) ===" >> "$LOG_FILE"

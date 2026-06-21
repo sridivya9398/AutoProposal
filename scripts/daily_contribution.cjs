@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 async function run() {
   const logFile = path.join(process.cwd(), 'DAILY_LOG.md');
@@ -7,8 +8,7 @@ async function run() {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`;
-  const timeStr = now.toTimeString().split(' ')[0];
+  const todayStr = `${year}-${month}-${day}`;
 
   // 1. Get Project Stats
   const srcDir = path.join(process.cwd(), 'src');
@@ -35,12 +35,6 @@ async function run() {
     }
   });
 
-  // 2. Component of the Day
-  const randomComp = componentFiles.length > 0 
-    ? path.relative(process.cwd(), componentFiles[Math.floor(Math.random() * componentFiles.length)])
-    : 'No components found yet.';
-
-  // 3. Daily Motivation/Tip
   const tips = [
     "Clean code always looks like it was written by someone who cares.",
     "Refactor early, refactor often.",
@@ -58,40 +52,114 @@ async function run() {
     "Complexity is the enemy of reliability.",
     "Testing shows the presence, not the absence of bugs."
   ];
-  const tip = tips[Math.floor(Math.random() * tips.length)];
 
-  // 4. Construct the log entry
-  const todoSection = todos.length > 0 
-    ? `\n- **Unfinished Business (TODOs)**:\n  - ${todos.slice(0, 5).join('\n  - ')}${todos.length > 5 ? `\n  - *...and ${todos.length - 5} more*` : ''}`
-    : '\n- **Status**: No pending TODOs found! (Clean Slate) ✨';
+  // 2. Read current log to determine missing dates
+  let lastDateStr = null;
+  let fileContent = '';
+  const header = '# 🚀 AutoProposal: Daily Evolution Log\n\nThis file is updated daily by the Antigravity AI to track project progress and keep the momentum alive.\n\n';
 
-  const entry = `
-## ${dateStr} [${timeStr}]
+  if (fs.existsSync(logFile)) {
+    fileContent = fs.readFileSync(logFile, 'utf8');
+    const match = fileContent.match(/##\s+(\d{4}-\d{2}-\d{2})/);
+    if (match) {
+      lastDateStr = match[1];
+    }
+  } else {
+    fileContent = header;
+  }
+
+  let datesToProcess = [];
+  if (!lastDateStr || process.argv.includes('--force')) {
+    // If no previous entries exist or force is specified, just process today
+    datesToProcess = [todayStr];
+  } else {
+    // Get all dates from lastDateStr (exclusive) to todayStr (inclusive)
+    datesToProcess = getDatesInRange(lastDateStr, todayStr);
+  }
+
+  if (datesToProcess.length === 0) {
+    console.log(`Daily log is up to date (last entry: ${lastDateStr}). No entries to add.`);
+    return;
+  }
+
+  console.log(`Processing daily contributions for: ${datesToProcess.join(', ')}`);
+
+  for (const dateStr of datesToProcess) {
+    // For each date, generate a distinct entry
+    const randomComp = componentFiles.length > 0 
+      ? path.relative(process.cwd(), componentFiles[Math.floor(Math.random() * componentFiles.length)])
+      : 'No components found yet.';
+
+    const tip = tips[Math.floor(Math.random() * tips.length)];
+
+    const todoSection = todos.length > 0 
+      ? `\n- **Unfinished Business (TODOs)**:\n  - ${todos.slice(0, 5).join('\n  - ')}${todos.length > 5 ? `\n  - *...and ${todos.length - 5} more*` : ''}`
+      : '\n- **Status**: No pending TODOs found! (Clean Slate) ✨';
+
+    let timeStr;
+    if (dateStr === todayStr) {
+      timeStr = now.toTimeString().split(' ')[0];
+    } else {
+      timeStr = '12:00:00';
+    }
+
+    const entry = `## ${dateStr} [${timeStr}]
 - **Project Pulse**: All systems operational.
 - **Growth**: ${totalLOC.toLocaleString()} total lines of code across ${tsFiles.length} TS files.
 - **Component of the Day**: \`${randomComp}\` (Give it some love today! 🛠️)
 - **Daily Insight**: *"${tip}"*${todoSection}
 ---
+
 `;
 
-  // 5. Update DAILY_LOG.md
-  let content = '';
-  if (fs.existsSync(logFile)) {
-    content = fs.readFileSync(logFile, 'utf8');
-    if (content.includes(`## ${dateStr}`) && !process.argv.includes('--force')) {
-      console.log(`Daily log for ${dateStr} already exists. Skipping to avoid duplicates.`);
-      return;
+    // Read file again to get latest state for insertion
+    if (fs.existsSync(logFile)) {
+      fileContent = fs.readFileSync(logFile, 'utf8');
+    } else {
+      fileContent = header;
     }
-  } else {
-    content = '# 🚀 AutoProposal: Daily Evolution Log\n\nThis file is updated daily by the Antigravity AI to track project progress and keep the momentum alive.\n\n';
+
+    // Insert new entry at the top (after header)
+    const headerEndIndex = fileContent.indexOf('\n\n') + 2;
+    const newContent = fileContent.slice(0, headerEndIndex) + entry + fileContent.slice(headerEndIndex);
+    fs.writeFileSync(logFile, newContent);
+
+    console.log(`Added entry for ${dateStr}`);
+
+    // Commit this change backdated
+    const gitDate = `${dateStr} ${timeStr}`;
+    try {
+      execSync('git add DAILY_LOG.md');
+      execSync(`git commit -m "docs: local daily pulse update 🚀"`, {
+        env: {
+          ...process.env,
+          GIT_AUTHOR_DATE: gitDate,
+          GIT_COMMITTER_DATE: gitDate
+        }
+      });
+      console.log(`Committed entry for ${dateStr} with date ${gitDate}`);
+    } catch (err) {
+      console.error(`Failed to commit for ${dateStr}:`, err.message);
+    }
   }
+}
 
-  // Insert new entry at the top (after header)
-  const headerEndIndex = content.indexOf('\n\n') + 2;
-  const newContent = content.slice(0, headerEndIndex) + entry + content.slice(headerEndIndex);
-
-  fs.writeFileSync(logFile, newContent);
-  console.log(`Updated daily log for ${dateStr} with enhanced metrics.`);
+function getDatesInRange(startDateStr, endDateStr) {
+  const dates = [];
+  let current = new Date(startDateStr + 'T12:00:00Z');
+  const end = new Date(endDateStr + 'T12:00:00Z');
+  
+  while (true) {
+    current.setUTCDate(current.getUTCDate() + 1);
+    if (current > end) {
+      break;
+    }
+    const year = current.getUTCFullYear();
+    const month = String(current.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(current.getUTCDate()).padStart(2, '0');
+    dates.push(`${year}-${month}-${day}`);
+  }
+  return dates;
 }
 
 function getAllFiles(dirPath, arrayOfFiles) {
