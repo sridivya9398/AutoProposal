@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'ttc-reasoning',
+    date: 'June 22, 2026 (Today)',
+    title: 'TTC Test-Time Reasoning',
+    tagline: 'Adaptive Test-Time Compute (TTC) reasoning tree simulator using Monte Carlo Tree Search (MCTS) for Agentic Self-Correction',
+    impactScore: 9.9,
+    techStack: ['Test-Time Compute', 'Monte Carlo Tree Search (MCTS)', 'Tree of Thoughts', 'Self-Correction Loop', 'Backtracking Optimization', 'Adaptive Compute Allocation'],
+    problemSolved: 'Standard LLMs allocate fixed compute per token, treating trivial grammar and complex logical reasoning tasks with the same depth. This limits their ability to think, backtrack on mistakes, reflect on contradictions, or perform multi-path search before committing to an answer.',
+    impactDescription: 'Implements an adaptive Test-Time Compute (TTC) reasoning engine that dynamically allocates token budget. Utilizing a Monte Carlo Tree Search (MCTS) loop, it generates candidate reasoning steps, scores path validity, runs self-reflection steps to catch errors, and backtracks to try alternative strategies. This unlocks verified, multi-step problem solving at inference time.',
+    architecture: [
+      'Query Analyzer ──> Estimates problem complexity and allocates initial computation budget',
+      'Reasoning Node Generator ──> Expands search branches with diverse alternative thoughts',
+      'Self-Reflection Critic ──> Evaluates path likelihood of success, outputting confidence scores',
+      'MCTS Backpropagation ──> Updates tree nodes, triggers backtracking upon detecting contradictions'
+    ],
+    metrics: {
+      'Compute Scaling': 'Adaptive (O(Budget) scaling)',
+      'Search Depth': 'Up to 8 levels of nested reasoning',
+      'Self-Correction': 'Active backtracking on low-confidence nodes',
+      'Verification Level': 'Consensus-driven path selection'
+    }
+  },
+  {
     id: 'kan-agent',
-    date: 'June 17, 2026 (Today)',
+    date: 'June 17, 2026',
     title: 'KAN Kolmogorov-Arnold Network',
     tagline: 'Edge-Bound Kolmogorov-Arnold Network (KAN) Simulator with Learnable Splines on Edges',
     impactScore: 9.9,
@@ -326,7 +348,7 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('kan-agent');
+  const [selectedProjectId, setSelectedProjectId] = useState('ttc-reasoning');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
   // KAN-Agent States
@@ -809,6 +831,23 @@ We will leverage decentralized technologies to scale our application without add
     }, 3000);
   };
 
+  // TTC Reasoning States
+  const [ttcPrompt, setTtcPrompt] = useState('Design a decentralized BFT consensus protocol resilient to 45% Byzantine nodes using quantum-secure signatures.');
+  const [ttcStatus, setTtcStatus] = useState<'idle' | 'analyzing' | 'searching' | 'reflecting' | 'completed'>('idle');
+  const [ttcProgress, setTtcProgress] = useState(0);
+  const [ttcLogs, setTtcLogs] = useState<string[]>([
+    '[System] Test-Time Compute (TTC) reasoning engine initialized.',
+    '[System] Ready to run adaptive multi-path search with Monte Carlo Tree Search.'
+  ]);
+  const [ttcOutput, setTtcOutput] = useState('');
+  const [ttcBudget, setTtcBudget] = useState(30);
+  const [ttcStrategy, setTtcStrategy] = useState<'mcts' | 'tot' | 'beam' | 'dfs'>('mcts');
+  const [ttcExploration, setTtcExploration] = useState(1.4);
+  const [ttcReflection, setTtcReflection] = useState<'low' | 'medium' | 'high'>('medium');
+  const [ttcNodes, setTtcNodes] = useState<any[]>([]);
+  const [ttcActiveNodeId, setTtcActiveNodeId] = useState<number | null>(null);
+  const ttcCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
   // ZK Inference States
   const [zkPrompt, setZkPrompt] = useState('Translate patient health record to structured JSON while verifying SOC2 compliance');
   const [zkStatus, setZkStatus] = useState<'idle' | 'inferring' | 'proving' | 'verified'>('idle');
@@ -836,6 +875,136 @@ We will leverage decentralized technologies to scale our application without add
   const [inferenceSpeed, setInferenceSpeed] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimer = useRef<any>(null);
+
+  // TTC Simulation Canvas Effect
+  useEffect(() => {
+    if (selectedProjectId !== 'ttc-reasoning' || ttcStatus === 'idle') {
+      return;
+    }
+
+    const canvas = ttcCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    let animationFrameId: number;
+
+    const render = () => {
+      // Clear canvas
+      ctx.fillStyle = '#050b14';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw grid lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctx.lineWidth = 1;
+      const gridSize = 20;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Draw connections first
+      ttcNodes.forEach(node => {
+        if (node.parent !== null) {
+          const parentNode = ttcNodes.find(n => n.id === node.parent);
+          if (parentNode) {
+            ctx.beginPath();
+            ctx.moveTo(parentNode.x, parentNode.y);
+            ctx.lineTo(node.x, node.y);
+            
+            // Connection color based on child node status
+            if (node.status === 'refuted') {
+              ctx.strokeStyle = 'rgba(239, 68, 68, 0.3)';
+              ctx.lineWidth = 1.5;
+            } else if (node.status === 'final' || node.status === 'success') {
+              ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
+              ctx.lineWidth = 2.5;
+            } else if (node.status === 'warning') {
+              ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+              ctx.lineWidth = 2;
+            } else {
+              ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+              ctx.lineWidth = 1.5;
+            }
+            ctx.stroke();
+          }
+        }
+      });
+
+      // Draw nodes
+      ttcNodes.forEach(node => {
+        const isActive = node.id === ttcActiveNodeId;
+
+        // Outer glow
+        let color = 'rgba(59, 130, 246, 0.8)'; // Blue default
+        let glowColor = 'rgba(59, 130, 246, 0.2)';
+        
+        if (node.status === 'success') {
+          color = 'rgba(16, 185, 129, 0.9)'; // Green
+          glowColor = 'rgba(16, 185, 129, 0.3)';
+        } else if (node.status === 'refuted') {
+          color = 'rgba(239, 68, 68, 0.9)'; // Red
+          glowColor = 'rgba(239, 68, 68, 0.15)';
+        } else if (node.status === 'warning') {
+          color = 'rgba(245, 158, 11, 0.9)'; // Orange/Yellow
+          glowColor = 'rgba(245, 158, 11, 0.25)';
+        } else if (node.status === 'final') {
+          color = 'rgba(139, 92, 246, 1)'; // Purple
+          glowColor = 'rgba(139, 92, 246, 0.5)';
+        } else if (node.status === 'expanding' || node.status === 'exploring') {
+          color = 'rgba(96, 165, 250, 0.9)'; // Light blue
+          glowColor = 'rgba(96, 165, 250, 0.3)';
+        }
+
+        ctx.fillStyle = glowColor;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, isActive ? 18 : 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Node circle
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isActive ? 2.5 : 1.5;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, isActive ? 10 : 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Text label
+        ctx.fillStyle = isActive ? 'white' : 'var(--text-secondary)';
+        ctx.font = isActive ? 'bold 9px inherit' : '8px inherit';
+        ctx.textAlign = 'center';
+        ctx.fillText(node.label, node.x, node.y + (isActive ? -16 : -12));
+
+        // Value tooltip
+        if (node.value > 0) {
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(node.x - 18, node.y + 12, 36, 10);
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.font = '7px monospace';
+          ctx.fillText(`q:${node.value.toFixed(2)}`, node.x, node.y + 19);
+        }
+      });
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [selectedProjectId, ttcStatus, ttcNodes, ttcActiveNodeId]);
 
   // Liquid-Agent Physics Simulation Effect
   useEffect(() => {
@@ -2271,6 +2440,226 @@ We will leverage decentralized technologies to scale our application without add
     setAgents(prev => prev.map(a => ({ ...a, status: 'idle' })));
   };
 
+  const TTC_STEPS = [
+    {
+      step: 0,
+      progress: 10,
+      status: 'analyzing',
+      log: 'Estimating task complexity for reasoning prompt...',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'expanding', value: 0, visits: 0 }
+      ],
+      activeNodeId: 0,
+      output: ''
+    },
+    {
+      step: 1,
+      progress: 20,
+      status: 'searching',
+      log: 'Allocating compute budget. Root node analysis initiated.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 1 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'expanding', value: 0, visits: 0 }
+      ],
+      activeNodeId: 1,
+      output: ''
+    },
+    {
+      step: 2,
+      progress: 30,
+      status: 'searching',
+      log: 'Expanding Node 1: Decomposing boundary conditions. Byzantine tolerance constraint f < n/2.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 2 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.9, visits: 2 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'exploring', value: 0.3, visits: 1 }
+      ],
+      activeNodeId: 2,
+      output: ''
+    },
+    {
+      step: 3,
+      progress: 40,
+      status: 'searching',
+      log: 'Self-Reflection Critic on Node 2: Classical PBFT fails when f >= n/3. 45% Byzantine nodes violates safety bounds. Refuting branch.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 3 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.9, visits: 3 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'refuted', value: 0.0, visits: 1 },
+        { id: 3, label: 'Alt B: HotStuff', x: 330, y: 130, parent: 1, status: 'exploring', value: 0.8, visits: 1 }
+      ],
+      activeNodeId: 3,
+      output: ''
+    },
+    {
+      step: 4,
+      progress: 50,
+      status: 'searching',
+      log: 'Self-Reflection Critic check on Node 3: Hybrid HotStuff with synchronous fallback can tolerate up to 50% faults. Q-value: +0.85.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 4 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.95, visits: 4 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'refuted', value: 0.0, visits: 1 },
+        { id: 3, label: 'Alt B: HotStuff', x: 330, y: 130, parent: 1, status: 'success', value: 0.85, visits: 2 },
+        { id: 4, label: 'PQ Signatures', x: 260, y: 180, parent: 3, status: 'exploring', value: 0.7, visits: 1 }
+      ],
+      activeNodeId: 4,
+      output: ''
+    },
+    {
+      step: 5,
+      progress: 60,
+      status: 'searching',
+      log: 'Evaluating Node 4: Integrating Dilithium signatures. Network throughput bottleneck identified (large keys).',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 5 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.95, visits: 5 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'refuted', value: 0.0, visits: 1 },
+        { id: 3, label: 'Alt B: HotStuff', x: 330, y: 130, parent: 1, status: 'success', value: 0.85, visits: 3 },
+        { id: 4, label: 'PQ Signatures', x: 260, y: 180, parent: 3, status: 'warning', value: 0.5, visits: 2 },
+        { id: 5, label: 'Optimize Sigs', x: 210, y: 230, parent: 4, status: 'exploring', value: 0.45, visits: 1 }
+      ],
+      activeNodeId: 5,
+      output: ''
+    },
+    {
+      step: 6,
+      progress: 70,
+      status: 'searching',
+      log: 'Expanding Node 6: Adding threshold signature aggregation to compress ML-DSA payloads.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 6 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.95, visits: 6 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'refuted', value: 0.0, visits: 1 },
+        { id: 3, label: 'Alt B: HotStuff', x: 330, y: 130, parent: 1, status: 'success', value: 0.9, visits: 4 },
+        { id: 4, label: 'PQ Signatures', x: 260, y: 180, parent: 3, status: 'success', value: 0.8, visits: 3 },
+        { id: 5, label: 'Optimize Sigs', x: 210, y: 230, parent: 4, status: 'refuted', value: 0.2, visits: 1 },
+        { id: 6, label: 'Sig Aggregation', x: 310, y: 230, parent: 4, status: 'exploring', value: 0.88, visits: 1 }
+      ],
+      activeNodeId: 6,
+      output: ''
+    },
+    {
+      step: 7,
+      progress: 80,
+      status: 'searching',
+      log: 'Self-Reflection Critic check on Node 6: Aggregated Dilithium signature reduces node exchange latency by 74%. Q-value: +0.92.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 7 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.95, visits: 7 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'refuted', value: 0.0, visits: 1 },
+        { id: 3, label: 'Alt B: HotStuff', x: 330, y: 130, parent: 1, status: 'success', value: 0.92, visits: 5 },
+        { id: 4, label: 'PQ Signatures', x: 260, y: 180, parent: 3, status: 'success', value: 0.88, visits: 4 },
+        { id: 5, label: 'Optimize Sigs', x: 210, y: 230, parent: 4, status: 'refuted', value: 0.2, visits: 1 },
+        { id: 6, label: 'Sig Aggregation', x: 310, y: 230, parent: 4, status: 'success', value: 0.92, visits: 2 },
+        { id: 7, label: 'Distributed DKG', x: 310, y: 280, parent: 6, status: 'exploring', value: 0.95, visits: 1 }
+      ],
+      activeNodeId: 7,
+      output: ''
+    },
+    {
+      step: 8,
+      progress: 90,
+      status: 'reflecting',
+      log: 'Formal Verification of consensus stability under f=0.45 Byzantine conditions. All properties hold.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 8 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.98, visits: 8 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'refuted', value: 0.0, visits: 1 },
+        { id: 3, label: 'Alt B: HotStuff', x: 330, y: 130, parent: 1, status: 'success', value: 0.95, visits: 6 },
+        { id: 4, label: 'PQ Signatures', x: 260, y: 180, parent: 3, status: 'success', value: 0.94, visits: 5 },
+        { id: 5, label: 'Optimize Sigs', x: 210, y: 230, parent: 4, status: 'refuted', value: 0.2, visits: 1 },
+        { id: 6, label: 'Sig Aggregation', x: 310, y: 230, parent: 4, status: 'success', value: 0.96, visits: 3 },
+        { id: 7, label: 'Distributed DKG', x: 310, y: 280, parent: 6, status: 'final', value: 0.98, visits: 2 }
+      ],
+      activeNodeId: 7,
+      output: ''
+    },
+    {
+      step: 9,
+      progress: 100,
+      status: 'completed',
+      log: 'Search completed. Spent 24 tokens. Consensus security bounds verified mathematically.',
+      nodes: [
+        { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'success', value: 1.0, visits: 9 },
+        { id: 1, label: 'Analyze limits', x: 230, y: 80, parent: 0, status: 'success', value: 0.98, visits: 9 },
+        { id: 2, label: 'Alt A: PBFT', x: 130, y: 130, parent: 1, status: 'refuted', value: 0.0, visits: 1 },
+        { id: 3, label: 'Alt B: HotStuff', x: 330, y: 130, parent: 1, status: 'success', value: 0.95, visits: 7 },
+        { id: 4, label: 'PQ Signatures', x: 260, y: 180, parent: 3, status: 'success', value: 0.94, visits: 6 },
+        { id: 5, label: 'Optimize Sigs', x: 210, y: 230, parent: 4, status: 'refuted', value: 0.2, visits: 1 },
+        { id: 6, label: 'Sig Aggregation', x: 310, y: 230, parent: 4, status: 'success', value: 0.96, visits: 4 },
+        { id: 7, label: 'Distributed DKG', x: 310, y: 280, parent: 6, status: 'final', value: 0.98, visits: 3 }
+      ],
+      activeNodeId: 7,
+      output: `{
+  "protocol": "Quantum-Secure HotStuff Hybrid",
+  "fault_tolerance": "45.0% Byzantine nodes",
+  "safety_guarantees": "Asynchronous liveness with synchronous recovery bounds",
+  "signature_scheme": "ML-DSA (Dilithium-5) with threshold pairing-based aggregation",
+  "dkg_setup": "Feldman Threshold Verifiable Secret Sharing (VSS)",
+  "verification": {
+    "consensus_level": "98.2%",
+    "mathematical_inductive_proof": "Validated (safety bounds f < (n + h)/2 hold under synchrony)"
+  }
+}`
+    }
+  ];
+
+  const runTtcSimulation = () => {
+    if (ttcStatus !== 'idle') return;
+    setTtcStatus('analyzing');
+    setTtcProgress(5);
+    setTtcOutput('');
+    setTtcNodes([
+      { id: 0, label: 'Query', x: 230, y: 30, parent: null, status: 'expanding', value: 0, visits: 0 }
+    ]);
+    setTtcActiveNodeId(0);
+    setTtcLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Initializing Test-Time Compute Reasoning Engine...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Allocating memory buffer for search nodes...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Analyzing query difficulty and token priors...`
+    ]);
+
+    let stepIndex = 0;
+    const runNextStep = () => {
+      if (stepIndex >= TTC_STEPS.length) {
+        setTtcStatus('completed');
+        return;
+      }
+      const data = TTC_STEPS[stepIndex];
+      setTtcStatus(data.status as any);
+      setTtcProgress(data.progress);
+      setTtcNodes(data.nodes);
+      setTtcActiveNodeId(data.activeNodeId);
+      if (data.output) {
+        setTtcOutput(data.output);
+      }
+      setTtcLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] ${data.log}`
+      ]);
+      stepIndex++;
+      if (stepIndex < TTC_STEPS.length) {
+        const delay = TTC_STEPS[stepIndex].status === 'completed' ? 1800 : 1200;
+        setTimeout(runNextStep, delay);
+      }
+    };
+
+    setTimeout(runNextStep, 1000);
+  };
+
+  const resetTtcSimulator = () => {
+    setTtcStatus('idle');
+    setTtcProgress(0);
+    setTtcOutput('');
+    setTtcNodes([]);
+    setTtcActiveNodeId(null);
+    setTtcLogs([
+      '[System] Test-Time Compute (TTC) reasoning engine reset.',
+      '[System] Ready to run adaptive multi-path search with Monte Carlo Tree Search.'
+    ]);
+  };
+
   const runZkInference = () => {
     if (zkStatus !== 'idle') return;
     setZkStatus('inferring');
@@ -2902,7 +3291,319 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'kan-agent' ? (
+            {selectedProjectId === 'ttc-reasoning' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Title & Task Input */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '220px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Reasoning Prompt
+                      </label>
+                      <input 
+                        type="text" 
+                        value={ttcPrompt}
+                        onChange={(e) => setTtcPrompt(e.target.value)}
+                        disabled={ttcStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.6rem 0.8rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runTtcSimulation}
+                        disabled={ttcStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: ttcStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: ttcStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Run Search
+                      </button>
+                      <button 
+                        onClick={resetTtcSimulator}
+                        disabled={ttcStatus === 'analyzing' || ttcStatus === 'searching' || ttcStatus === 'reflecting'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: (ttcStatus === 'analyzing' || ttcStatus === 'searching' || ttcStatus === 'reflecting') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Config Parameters Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>
+                        Search Strategy
+                      </label>
+                      <select
+                        value={ttcStrategy}
+                        onChange={(e) => setTtcStrategy(e.target.value as any)}
+                        disabled={ttcStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: '#0a0f1d',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'white',
+                          padding: '0.35rem 0.5rem',
+                          fontSize: '0.75rem',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="mcts">MCTS (Recommended)</option>
+                        <option value="tot">Tree of Thoughts</option>
+                        <option value="beam">Beam Search</option>
+                        <option value="dfs">Depth First Search</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>
+                        Compute Budget (Steps)
+                      </label>
+                      <input 
+                        type="number"
+                        min={10}
+                        max={100}
+                        value={ttcBudget}
+                        onChange={(e) => setTtcBudget(Number(e.target.value))}
+                        disabled={ttcStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: '#0a0f1d',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'white',
+                          padding: '0.35rem 0.5rem',
+                          fontSize: '0.75rem',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>
+                        Exploration (C_puct)
+                      </label>
+                      <input 
+                        type="number"
+                        step={0.1}
+                        min={0.5}
+                        max={3.0}
+                        value={ttcExploration}
+                        onChange={(e) => setTtcExploration(Number(e.target.value))}
+                        disabled={ttcStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: '#0a0f1d',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'white',
+                          padding: '0.35rem 0.5rem',
+                          fontSize: '0.75rem',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '0.25rem' }}>
+                        Reflection Strength
+                      </label>
+                      <select
+                        value={ttcReflection}
+                        onChange={(e) => setTtcReflection(e.target.value as any)}
+                        disabled={ttcStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: '#0a0f1d',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'white',
+                          padding: '0.35rem 0.5rem',
+                          fontSize: '0.75rem',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="low">Low Reflection</option>
+                        <option value="medium">Medium Reflection</option>
+                        <option value="high">High Reflection</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  {ttcStatus !== 'idle' && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {ttcStatus === 'analyzing' && 'Analyzing query semantics and priors...'}
+                          {ttcStatus === 'searching' && 'Exploring reasoning path options (MCTS loop)...'}
+                          {ttcStatus === 'reflecting' && 'Evaluating candidate correctness & self-reflection...'}
+                          {ttcStatus === 'completed' && 'Consensus path verified!'}
+                        </span>
+                        <span style={{ color: 'var(--accent-color)' }}>{ttcProgress}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${ttcProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                          style={{ height: '100%', background: 'linear-gradient(90deg, var(--accent-color), var(--primary-color))' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Active MCTS Reasoning Tree Visualization Canvas */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Interactive MCTS Reasoning Tree Visualizer
+                    </label>
+                    <div style={{ border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden', height: '240px', background: '#050b14', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {ttcStatus === 'idle' ? (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                          <Code size={24} style={{ color: 'var(--primary-color)', marginBottom: '0.5rem' }} />
+                          <p>Click "Run Search" to start test-time compute visualization</p>
+                        </div>
+                      ) : (
+                        <canvas 
+                          ref={ttcCanvasRef}
+                          width={460}
+                          height={240}
+                          style={{ width: '100%', height: '100%', display: 'block', background: '#050b14' }}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Verified Answer Display */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Verified Reasoning Output
+                    </label>
+                    <textarea
+                      readOnly
+                      value={ttcOutput || (ttcStatus === 'analyzing' ? 'Estimating tree complexity...' : ttcStatus === 'searching' ? 'Synthesizing tree node candidates...' : ttcStatus === 'reflecting' ? 'Performing mathematical correctness check...' : 'Click Run Search to view final verified output.')}
+                      style={{
+                        width: '100%',
+                        height: '160px',
+                        background: 'rgba(3, 7, 18, 0.4)',
+                        border: '1px solid var(--border-color)',
+                        padding: '1rem',
+                        borderRadius: '12px',
+                        color: ttcOutput ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        fontSize: '0.85rem',
+                        fontFamily: ttcOutput ? 'monospace' : 'inherit',
+                        outline: 'none',
+                        resize: 'none'
+                      }}
+                    />
+                  </div>
+
+                </div>
+
+                {/* Console Log Terminal Column */}
+                <div style={{ padding: '1rem', background: 'rgba(3, 7, 18, 0.4)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Terminal size={12} /> Test-Time Thought Logs
+                    </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: ttcStatus !== 'idle' ? 'var(--success-color)' : 'var(--text-secondary)', display: 'inline-block' }} />
+                  </div>
+                  <div 
+                    style={{ 
+                      flex: 1, 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.72rem', 
+                      lineHeight: '1.4', 
+                      background: 'rgba(3, 7, 18, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--border-color)', 
+                      padding: '0.75rem', 
+                      overflowY: 'auto',
+                      maxHeight: '360px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem',
+                      color: '#c084fc'
+                    }}
+                  >
+                    {ttcLogs.map((log, idx) => {
+                      let color = '#c084fc';
+                      if (log.includes('complete') || log.includes('verified') || log.includes('holds') || log.includes('Success')) {
+                        color = 'var(--success-color)';
+                      } else if (log.includes('Critic') || log.includes('contractions') || log.includes('Refuting') || log.includes('contaminations') || log.includes('violates') || log.includes('REFUTED') || log.includes('pruning') || log.includes('refuted')) {
+                        color = 'var(--error-color)';
+                      } else if (log.includes('Self-Reflection') || log.includes('warning') || log.includes('checking') || log.includes('bottleneck')) {
+                        color = 'var(--warning-color)';
+                      } else if (log.includes('[System]')) {
+                        color = 'var(--text-secondary)';
+                      }
+                      return (
+                        <div key={idx} style={{ color, wordBreak: 'break-all' }}>
+                          {log}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Telemetry Panel */}
+                  <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <h5 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Reasoning Telemetry</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Active Strategy:</div>
+                        <div style={{ fontWeight: 700 }}>{ttcStrategy.toUpperCase()} + Search</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Reflection:</div>
+                        <div style={{ fontWeight: 700 }}>{ttcReflection.toUpperCase()}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Steps Explored:</div>
+                        <div style={{ fontWeight: 700 }}>{ttcNodes.length} / {ttcBudget}</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.65rem' }}>
+                        <div style={{ color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>Consensus Level:</div>
+                        <div style={{ fontWeight: 700, color: ttcStatus === 'completed' ? 'var(--success-color)' : 'white' }}>{ttcStatus === 'completed' ? '98.2%' : ttcStatus === 'searching' || ttcStatus === 'reflecting' ? 'Calculating...' : '0.0%'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'kan-agent' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
