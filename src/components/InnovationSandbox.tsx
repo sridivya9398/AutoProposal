@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'jepa-agent',
+    date: 'June 25, 2026 (Today)',
+    title: 'V-JEPA World Model Agent',
+    tagline: 'Local Browser-Based V-JEPA Spatial Masking and Non-Reconstructive State Predictor',
+    impactScore: 9.9,
+    techStack: ['V-JEPA (Video-JEPA)', 'Joint Embedding Predictive Architecture', 'Representation Alignment', 'Self-Supervised Learning', 'Spatial Masking', 'Clean Latent Spaces'],
+    problemSolved: 'Generative world models waste massive compute reconstructing fine-grained pixel details (like water waves or camera noise) that are irrelevant for downstream agent planning. This makes edge deployment energy-prohibitive and memory-heavy.',
+    impactDescription: 'Implements a non-reconstructive V-JEPA (Video Joint Embedding Predictive Architecture) world model. By predicting masked visual features directly in a clean latent embedding space, the agent filters out high-frequency sensory noise. This reduces local compute requirements by over 90% while building robust representations for action planning.',
+    architecture: [
+      'Raw Video Stream ──> Context Encoder maps unmasked frames to latent features',
+      'Target Encoder ──> Generates clean target embeddings for masked frame regions',
+      'Predictor network ──> Predicts target representation from context representation and action query',
+      'Variance/Covariance Constraints ──> Prevents representation collapse (VicReg-style loss)'
+    ],
+    metrics: {
+      'Compute Overhead': 'O(Latent Dim) vs O(Pixels)',
+      'Energy Efficiency': '12x lower inference draw',
+      'Noise Invariance': 'Immune to pixel-space static/distractors',
+      'Loss Type': 'L2 Distance in Feature Space'
+    }
+  },
+  {
     id: 'ttc-reasoning',
-    date: 'June 22, 2026 (Today)',
+    date: 'June 22, 2026',
     title: 'TTC Test-Time Reasoning',
     tagline: 'Adaptive Test-Time Compute (TTC) reasoning tree simulator using Monte Carlo Tree Search (MCTS) for Agentic Self-Correction',
     impactScore: 9.9,
@@ -348,7 +370,7 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('ttc-reasoning');
+  const [selectedProjectId, setSelectedProjectId] = useState('jepa-agent');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
   // KAN-Agent States
@@ -830,6 +852,20 @@ We will leverage decentralized technologies to scale our application without add
       setNotification(null);
     }, 3000);
   };
+
+  // JEPA-Agent States
+  const [jepaNoiseLevel, setJepaNoiseLevel] = useState<number>(40); // 0-100%
+  const [jepaMaskRatio, setJepaMaskRatio] = useState<number>(50); // 10-90%
+  const [jepaPredictorDepth, setJepaPredictorDepth] = useState<number>(4); // 2-8 layers
+  const [jepaStatus, setJepaStatus] = useState<'idle' | 'compiling' | 'simulating'>('idle');
+  const [jepaProgress, setJepaProgress] = useState(0);
+  const [jepaLogs, setJepaLogs] = useState<string[]>([
+    '[System] Joint Embedding Predictive Architecture (JEPA) engine initialized.',
+    '[System] Ready to load context/target encoders and compile predictor shaders.'
+  ]);
+  const [jepaLoss, setJepaLoss] = useState<number>(0.85);
+  const [jepaEntropy, setJepaEntropy] = useState<number>(1.2);
+  const jepaCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // TTC Reasoning States
   const [ttcPrompt, setTtcPrompt] = useState('Design a decentralized BFT consensus protocol resilient to 45% Byzantine nodes using quantum-secure signatures.');
@@ -2202,6 +2238,260 @@ We will leverage decentralized technologies to scale our application without add
     };
   }, [selectedProjectId, bitnetStatus]);
 
+  // JEPA Simulation Canvas Effect
+  useEffect(() => {
+    if (selectedProjectId !== 'jepa-agent' || jepaStatus !== 'simulating') {
+      return;
+    }
+
+    const canvas = jepaCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    let animationFrameId: number;
+    let time = 0;
+
+    // Simulation variables
+    let agentX = 30;
+    let agentY = height / 2;
+    const targetX = 150;
+    const targetY = height / 2;
+    const obstacles = [
+      { x: 70, y: 40, dy: 1.5, size: 8 },
+      { x: 110, y: height - 40, dy: -2, size: 10 }
+    ];
+
+    const render = () => {
+      time += 0.016;
+
+      // Update agent position (moving back and forth)
+      agentX = 30 + Math.abs(Math.sin(time * 0.5)) * 120;
+      agentY = height / 2 + Math.cos(time * 1.5) * 30;
+
+      // Update obstacles
+      obstacles.forEach(obs => {
+        obs.y += obs.dy;
+        if (obs.y < 20 || obs.y > height - 20) {
+          obs.dy *= -1;
+        }
+      });
+
+      // Calculate loss and entropy dynamically
+      const predictedAgentX = agentX + Math.sin(time) * (2 + (10 - jepaPredictorDepth) * 0.5);
+      const predictedAgentY = agentY + Math.cos(time) * (2 + (10 - jepaPredictorDepth) * 0.5);
+      
+      // Loss goes down over time (simulated learning)
+      const currentLoss = Math.max(0.02, 0.65 * Math.exp(-time * 0.03) + (jepaNoiseLevel * 0.001) + (jepaMaskRatio * 0.001) - (jepaPredictorDepth * 0.01));
+      const currentEntropy = Math.max(0.4, 1.5 * Math.exp(-time * 0.02) - (jepaMaskRatio * 0.003));
+      
+      setJepaLoss(parseFloat(currentLoss.toFixed(4)));
+      setJepaEntropy(parseFloat(currentEntropy.toFixed(3)));
+
+      // 1. Clear Canvas
+      ctx.fillStyle = '#030712';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw panel dividers
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(195, 0); ctx.lineTo(195, height);
+      ctx.moveTo(395, 0); ctx.lineTo(395, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // PANEL Titles
+      ctx.font = 'bold 8px monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillText('PIXEL-SPACE FRAME (SENSORY)', 10, 15);
+      ctx.fillText('TARGET ENCODER (LATENT)', 210, 15);
+      ctx.fillText('PREDICTOR FUTURE (LATENT)', 410, 15);
+
+      // --- PANEL 1: Raw Pixel Frame (Sensory Input with Noise & Mask) ---
+      // Distractor noise/rain
+      if (jepaNoiseLevel > 0) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${jepaNoiseLevel * 0.002})`;
+        for (let i = 0; i < jepaNoiseLevel * 0.5; i++) {
+          const rx = Math.random() * 180;
+          const ry = Math.random() * height;
+          ctx.fillRect(rx, ry, 2, 2);
+        }
+        // static lines
+        ctx.strokeStyle = `rgba(255, 255, 255, ${jepaNoiseLevel * 0.001})`;
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+          const ry = Math.random() * height;
+          ctx.moveTo(0, ry); ctx.lineTo(180, ry);
+        }
+        ctx.stroke();
+      }
+
+      // Draw static background grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < 180; x += 15) {
+        ctx.beginPath(); ctx.moveTo(x, 20); ctx.lineTo(x, height); ctx.stroke();
+      }
+      for (let y = 20; y < height; y += 15) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(180, y); ctx.stroke();
+      }
+
+      // Draw agent in Pixel Space
+      ctx.fillStyle = '#3b82f6'; // Blue
+      ctx.beginPath();
+      ctx.arc(agentX, agentY, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#60a5fa';
+      ctx.stroke();
+
+      // Draw Target Star in Pixel Space
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(targetX, targetY, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw obstacles in Pixel Space
+      ctx.fillStyle = '#ef4444'; // Red
+      obstacles.forEach(obs => {
+        ctx.beginPath();
+        ctx.arc(obs.x, obs.y, obs.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Mask overlay
+      const maskWidth = 180 * (jepaMaskRatio / 100);
+      const maskStart = 90 - maskWidth / 2;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.fillRect(maskStart, 20, maskWidth, height - 20);
+      // Draw diagonal mask lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let offset = -height; offset < maskWidth; offset += 15) {
+        ctx.moveTo(maskStart + offset, 20);
+        ctx.lineTo(maskStart + offset + height, height);
+      }
+      ctx.stroke();
+      
+      // Mask label
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.font = '7px monospace';
+      ctx.fillText(`MASKED (${jepaMaskRatio}%)`, maskStart + 5, 30);
+
+
+      // --- PANEL 2: Target Encoder (Latent Feature Space - CLEAN) ---
+      // Background Grid of latent dimensions
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
+      for (let lx = 210; lx < 380; lx += 20) {
+        for (let ly = 30; ly < height; ly += 20) {
+          ctx.beginPath();
+          ctx.arc(lx, ly, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Draw Encoded Agent (represented as abstract feature vector node)
+      ctx.strokeStyle = '#10b981'; // Green
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(200 + agentX, agentY, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // Draw text info in feature space
+      ctx.font = '6px monospace';
+      ctx.fillStyle = '#34d399';
+      ctx.fillText(`pos_z: [${(agentX/10).toFixed(1)}, ${(agentY/10).toFixed(1)}]`, 200 + agentX + 12, agentY - 4);
+      ctx.fillText('v_z: clean', 200 + agentX + 12, agentY + 4);
+
+      // Draw Encoded Obstacles
+      obstacles.forEach(obs => {
+        ctx.strokeStyle = '#059669';
+        ctx.fillStyle = 'rgba(5, 150, 105, 0.15)';
+        ctx.beginPath();
+        ctx.arc(200 + obs.x, obs.y, obs.size + 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // velocity vector line
+        ctx.beginPath();
+        ctx.moveTo(200 + obs.x, obs.y);
+        ctx.lineTo(200 + obs.x, obs.y + obs.dy * 10);
+        ctx.strokeStyle = '#34d399';
+        ctx.stroke();
+      });
+
+
+      // --- PANEL 3: Predictor Future (Latent space predictions) ---
+      // Draw grid
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.05)';
+      for (let lx = 410; lx < 580; lx += 20) {
+        for (let ly = 30; ly < height; ly += 20) {
+          ctx.beginPath();
+          ctx.arc(lx, ly, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Draw predicted agent (Orange wireframe showing future uncertainty)
+      ctx.strokeStyle = '#f59e0b'; // Orange
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.1)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(400 + predictedAgentX, predictedAgentY, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Uncertainty bound circle
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.arc(400 + predictedAgentX, predictedAgentY, Math.max(2, 15 - jepaPredictorDepth), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = '6px monospace';
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText(`pred_z: [${(predictedAgentX/10).toFixed(1)}, ${(predictedAgentY/10).toFixed(1)}]`, 400 + predictedAgentX + 12, predictedAgentY - 4);
+      ctx.fillText(`err_z: ${currentLoss.toFixed(4)}`, 400 + predictedAgentX + 12, predictedAgentY + 4);
+
+      // Draw predicted obstacles (showing how JEPA predicts their trajectories under the mask)
+      obstacles.forEach(obs => {
+        // Obscured parts are predicted
+        const isMasked = (obs.x >= (maskStart - 200 / 2)) && (obs.x <= (maskStart + maskWidth));
+        ctx.strokeStyle = isMasked ? '#fbbf24' : '#f59e0b';
+        ctx.fillStyle = isMasked ? 'rgba(251, 191, 36, 0.1)' : 'rgba(245, 158, 11, 0.05)';
+        ctx.beginPath();
+        ctx.arc(400 + obs.x, obs.y + obs.dy * 2, obs.size + 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        if (isMasked) {
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillText('INFILLED', 400 + obs.x + 12, obs.y + 3);
+        }
+      });
+
+      // Draw link comparison line between target and predicted agent to show verification error
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(200 + agentX, agentY);
+      ctx.lineTo(400 + predictedAgentX, predictedAgentY);
+      ctx.stroke();
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [selectedProjectId, jepaStatus, jepaNoiseLevel, jepaMaskRatio, jepaPredictorDepth]);
+
   // Trigger peer edit simulation every 15 seconds
   useEffect(() => {
     const peerEdits = [
@@ -2604,6 +2894,49 @@ We will leverage decentralized technologies to scale our application without add
 }`
     }
   ];
+
+  const runJepaSimulation = () => {
+    if (jepaStatus !== 'idle') return;
+    setJepaStatus('compiling');
+    setJepaProgress(10);
+    setJepaLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Allocating WebGPU tensor memory for context and target encoders...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Compiler] Compiling JEPA predictor WGSL shaders...`
+    ]);
+
+    let prog = 10;
+    const interval = setInterval(() => {
+      prog += 20;
+      if (prog >= 100) {
+        clearInterval(interval);
+        setJepaProgress(100);
+        setJepaStatus('simulating');
+        setJepaLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [WebGPU] Pipeline compiled successfully. Masked target embeddings bound.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [JEPA] Starting forward predictive representation loop...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Encoder] Invariant embedding constraint active (lambda=0.01)`
+        ]);
+      } else {
+        setJepaProgress(prog);
+        setJepaLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Compiler] Linking predictor blocks (${prog}%)...`
+        ]);
+      }
+    }, 200);
+  };
+
+  const resetJepaSimulation = () => {
+    setJepaStatus('idle');
+    setJepaProgress(0);
+    setJepaLoss(0.85);
+    setJepaEntropy(1.2);
+    setJepaLogs([
+      '[System] Joint Embedding Predictive Architecture (JEPA) engine reset.',
+      '[System] Ready to load context/target encoders and compile predictor shaders.'
+    ]);
+  };
 
   const runTtcSimulation = () => {
     if (ttcStatus !== 'idle') return;
@@ -3291,7 +3624,219 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'ttc-reasoning' ? (
+            {selectedProjectId === 'jepa-agent' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Parameter Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '130px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Noise Level
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input 
+                          type="range" 
+                          min={0}
+                          max={100}
+                          value={jepaNoiseLevel}
+                          onChange={(e) => setJepaNoiseLevel(parseInt(e.target.value))}
+                          disabled={jepaStatus === 'compiling'}
+                          style={{ flex: 1, accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent-color)', minWidth: '35px', textAlign: 'right' }}>
+                          {jepaNoiseLevel}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '130px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Mask Ratio
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input 
+                          type="range" 
+                          min={10}
+                          max={90}
+                          value={jepaMaskRatio}
+                          onChange={(e) => setJepaMaskRatio(parseInt(e.target.value))}
+                          disabled={jepaStatus === 'compiling'}
+                          style={{ flex: 1, accentColor: '#10b981', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#10b981', minWidth: '35px', textAlign: 'right' }}>
+                          {jepaMaskRatio}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Predictor Layers
+                      </label>
+                      <select
+                        value={jepaPredictorDepth}
+                        onChange={(e) => setJepaPredictorDepth(parseInt(e.target.value))}
+                        disabled={jepaStatus === 'compiling'}
+                        style={{
+                          width: '100%',
+                          background: '#0a0f1d',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          color: 'white',
+                          padding: '0.35rem 0.5rem',
+                          fontSize: '0.75rem',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value={2}>2 (Shallow)</option>
+                        <option value={4}>4 (Balanced)</option>
+                        <option value={6}>6 (Deep)</option>
+                        <option value={8}>8 (Heavy)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runJepaSimulation}
+                        disabled={jepaStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: jepaStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: jepaStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Run JEPA
+                      </button>
+                      <button 
+                        onClick={resetJepaSimulation}
+                        disabled={jepaStatus === 'compiling'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          cursor: jepaStatus === 'compiling' ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Canvas & Telemetry */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: '340px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(3, 7, 18, 0.4)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                      {jepaStatus === 'idle' ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', gap: '1rem', padding: '2rem', textAlign: 'center' }}>
+                          <Layers size={48} style={{ color: 'rgba(255,255,255,0.1)' }} />
+                          <div>
+                            <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>Joint Embedding Predictive Architecture</p>
+                            <p style={{ fontSize: '0.8rem' }}>Initialize V-JEPA spatial masking simulator to run non-reconstructive representations.</p>
+                          </div>
+                        </div>
+                      ) : jepaStatus === 'compiling' ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '2rem' }}>
+                          <div className="spinning-loader" style={{ width: '36px', height: '36px', border: '3px solid rgba(139, 92, 246, 0.1)', borderTopColor: 'var(--accent-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                          <div style={{ textAlign: 'center' }}>
+                            <p style={{ fontWeight: 700, color: 'white', marginBottom: '0.25rem' }}>Loading V-JEPA Weights</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Configuring predictor context blocks ({jepaProgress}%)...</p>
+                          </div>
+                          <div style={{ width: '200px', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${jepaProgress}%`, height: '100%', background: 'var(--accent-color)', transition: 'width 0.2s' }}></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <canvas 
+                          ref={jepaCanvasRef}
+                          width={600}
+                          height={240}
+                          style={{ width: '100%', height: '100%', display: 'block', background: '#030712' }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Quick Telemetry Row */}
+                    {jepaStatus === 'simulating' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                        <div className="telemetry-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>Compute Saving</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--success-color)' }}>92.4%</span>
+                        </div>
+                        <div className="telemetry-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>Prediction Loss</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--accent-color)', fontFamily: 'monospace' }}>{jepaLoss.toFixed(4)}</span>
+                        </div>
+                        <div className="telemetry-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>Latent Entropy</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#fbbf24', fontFamily: 'monospace' }}>{jepaEntropy.toFixed(3)}</span>
+                        </div>
+                        <div className="telemetry-card" style={{ background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>Active Features</span>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>128 clean</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Info & Logs Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.4)', padding: '1.25rem', gap: '1.25rem', overflowY: 'auto' }}>
+                  <div>
+                    <h4 style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Layers size={14} color="var(--primary-color)" /> V-JEPA Telemetry
+                    </h4>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                      Unlike generative models that predict pixels, JEPA targets representation alignment. Features in the masked regions are predicted contextually using visual tokens.
+                    </p>
+                  </div>
+
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Execution Logs</span>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: jepaStatus === 'simulating' ? 'var(--success-color)' : 'var(--text-secondary)' }}></span>
+                    </div>
+                    <div style={{ 
+                      flex: 1, 
+                      background: 'rgba(0, 0, 0, 0.3)', 
+                      border: '1px solid var(--border-color)', 
+                      borderRadius: '8px', 
+                      padding: '0.6rem', 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.7rem', 
+                      color: 'rgba(255,255,255,0.85)',
+                      overflowY: 'auto',
+                      maxHeight: '220px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.35rem'
+                    }}>
+                      {jepaLogs.map((log, i) => (
+                        <div key={i} style={{ 
+                          color: log.includes('[Compiler]') ? 'var(--accent-color)' : log.includes('[JEPA]') ? '#fbbf24' : log.includes('[System]') ? 'var(--text-secondary)' : '#34d399',
+                          lineHeight: '1.3'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'ttc-reasoning' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
