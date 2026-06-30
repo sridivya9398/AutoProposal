@@ -70,18 +70,18 @@ if [ "$LOCAL_HASH" != "$REMOTE_HASH" ]; then
   
   if [ $PUSH_STATUS -eq 0 ]; then
     echo "Daily contribution pushed successfully." >> "$LOG_FILE"
-    
-    # Sync the active repo by pulling the latest commit from origin main
-    if [ -d "$ACTIVE_REPO" ]; then
-      cd "$ACTIVE_REPO" || exit 1
-      echo "Syncing active workspace by pulling latest changes..." >> "$LOG_FILE"
-      git pull origin main >> "$LOG_FILE" 2>&1
-    fi
   else
     echo "Git push failed in isolated repo." >> "$LOG_FILE"
   fi
 else
   echo "No new commits to push." >> "$LOG_FILE"
+fi
+
+# Sync the active repo by pulling the latest commit from origin main (runs on every execution to ensure workspace remains in sync)
+if [ -d "$ACTIVE_REPO" ]; then
+  cd "$ACTIVE_REPO" || exit 1
+  echo "Syncing active workspace by pulling latest changes..." >> "$LOG_FILE"
+  git pull origin main >> "$LOG_FILE" 2>&1
 fi
 
 echo "=== Daily Contribution End: $(date) ===" >> "$LOG_FILE"
