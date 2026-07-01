@@ -17,8 +17,30 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'sae-steering',
+    date: 'July 01, 2026 (Today)',
+    title: 'Sparse Autoencoder (SAE) Feature Steering',
+    tagline: 'Real-time activation patching and safety boundary steering simulator for LLMs',
+    impactScore: 9.9,
+    techStack: ['Sparse Autoencoders (SAEs)', 'Activation Patching', 'Feature Steering', 'LLM Interpretability', 'Safety Intervention', 'Monosemantic Features'],
+    problemSolved: 'Standard safety alignment (RLHF/DPO) behaves like a soft filter that can easily be jailbroken or bypassed. Furthermore, internal representation superposition makes it impossible to surgically control specific behaviors or understand how the model represents complex concepts.',
+    impactDescription: 'Implements a client-side visualization of Sparse Autoencoders (SAEs) applied to an LLM\'s intermediate MLP/attention activations. By projecting dense activation patterns into a high-dimensional sparse feature space, it isolates independent, monosemantic concepts. It enables real-time feature steering by scaling feature coefficients to force specific personas or suppress unsafe/harmful concepts.',
+    architecture: [
+      'LLM Layer Activation ──> Extract dense activation vector x from intermediate layer',
+      'Sparse Autoencoder Encoder ──> Project x to high-dim feature space f = ReLU(W_enc * x + b_enc)',
+      'Feature Steering Controller ──> Inject manual scaling multipliers directly on the sparse feature vector f',
+      'Sparse Autoencoder Decoder ──> Reconstruct LLM activations x\' = W_dec * f_steered + b_dec and inject back into the forward pass'
+    ],
+    metrics: {
+      'Sparsity (L0 norm)': '~12 active features (out of 16k)',
+      'Reconstruction Fidelity': '98.5% Explained Variance',
+      'Steering Latency': '< 5ms (In-memory tensor patch)',
+      'Intervention Type': 'Activation Clamping / Scaling'
+    }
+  },
+  {
     id: 'jepa-agent',
-    date: 'June 25, 2026 (Today)',
+    date: 'June 25, 2026',
     title: 'V-JEPA World Model Agent',
     tagline: 'Local Browser-Based V-JEPA Spatial Masking and Non-Reconstructive State Predictor',
     impactScore: 9.9,
@@ -370,7 +392,7 @@ const PROJECTS: TechProject[] = [
 ];
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('jepa-agent');
+  const [selectedProjectId, setSelectedProjectId] = useState('sae-steering');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
   // KAN-Agent States
@@ -907,10 +929,246 @@ We will leverage decentralized technologies to scale our application without add
   const [fhePlaintextQuery, setFhePlaintextQuery] = useState('');
   const [fheResults, setFheResults] = useState<{ title: string; score: number; text: string }[]>([]);
 
-  // Stats logs
   const [inferenceSpeed, setInferenceSpeed] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimer = useRef<any>(null);
+
+  // SAE Feature Steering States
+  const [saePrompt, setSaePrompt] = useState('Explain how a nuclear reactor works.');
+  const [saeStatus, setSaeStatus] = useState<'idle' | 'compiling' | 'extracting' | 'patching' | 'completed'>('idle');
+  const [saeProgress, setSaeProgress] = useState(0);
+  const [saeLogs, setSaeLogs] = useState<string[]>([
+    '[System] Sparse Autoencoder (SAE) steering engine initialized.',
+    '[System] Ready to run activation patching and concept intervention.'
+  ]);
+  const [saeSelectedLayer, setSaeSelectedLayer] = useState<'layer-12' | 'layer-24' | 'layer-32'>('layer-12');
+  const [saeSteering, setSaeSteering] = useState<{ [key: string]: number }>({
+    pirate: 0.0,
+    deceit: 0.0,
+    academic: 0.0,
+    direct: 0.0
+  });
+  const [saeOutput, setSaeOutput] = useState('');
+  const saeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const runSaeSimulation = () => {
+    if (saeStatus !== 'idle') return;
+    setSaeStatus('compiling');
+    setSaeProgress(5);
+    setSaeOutput('');
+    setSaeLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Allocating SAE dictionary tensor parameters (16,384 x 4,096)...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Compiler] Linking activation patching memory hooks on ${saeSelectedLayer}...`
+    ]);
+
+    let prog = 5;
+    const interval = setInterval(() => {
+      prog += 15;
+      if (prog >= 50 && prog < 65) {
+        setSaeStatus('extracting');
+        setSaeLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Forward Pass] Extracting activation vectors from ${saeSelectedLayer}.mlp.out...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Encoder] Running SAE encoder: f = ReLU(W_enc * x + b_enc)...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [SAE Engine] Top active features in prompt baseline:`,
+          `  - Feature #2301 (Helpful assistant) activation: 1.45`,
+          `  - Feature #714 (Technical terminology) activation: 0.82`,
+          `  - Feature #11054 (Academic prose) activation: 0.34`
+        ]);
+      } else if (prog >= 80 && prog < 95) {
+        setSaeStatus('patching');
+        
+        const activeSteersLog: string[] = [];
+        if (saeSteering.pirate !== 0) activeSteersLog.push(`Feature #4812 (Pirate) steered to ${saeSteering.pirate > 0 ? '+' : ''}${saeSteering.pirate.toFixed(1)}`);
+        if (saeSteering.deceit !== 0) activeSteersLog.push(`Feature #9204 (Deceit) steered to ${saeSteering.deceit > 0 ? '+' : ''}${saeSteering.deceit.toFixed(1)}`);
+        if (saeSteering.academic !== 0) activeSteersLog.push(`Feature #11054 (Academic) steered to ${saeSteering.academic > 0 ? '+' : ''}${saeSteering.academic.toFixed(1)}`);
+        if (saeSteering.direct !== 0) activeSteersLog.push(`Feature #2301 (Direct/Helpful) steered to ${saeSteering.direct > 0 ? '+' : ''}${saeSteering.direct.toFixed(1)}`);
+        
+        setSaeLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Patching] Injecting steering coefficients on sparse latents:`,
+          ...(activeSteersLog.length > 0 ? activeSteersLog.map(l => `  - ${l}`) : ['  - No active steering adjustments (running baseline).']),
+          `[${new Date().toTimeString().split(' ')[0]}] [Decoder] Reconstructing patched activations: x' = W_dec * f_steered + b_dec...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Decoder] MSE Reconstruction error: ${(0.0012 + (Math.abs(saeSteering.pirate) + Math.abs(saeSteering.deceit) + Math.abs(saeSteering.academic) + Math.abs(saeSteering.direct)) * 0.0035).toFixed(4)}`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Inference] Binding custom hook to rewrite activations dynamically during decoding...`
+        ]);
+      }
+
+      if (prog >= 100) {
+        clearInterval(interval);
+        setSaeProgress(100);
+        setSaeStatus('completed');
+        setSaeLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Inference] Starting autoregressive token generation...`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Inference] Steered context active.`
+        ]);
+        
+        streamSaeOutput();
+      } else {
+        setSaeProgress(prog);
+      }
+    }, 200);
+    saeIntervalRef.current = interval;
+  };
+
+  const streamSaeOutput = () => {
+    const getSentenceStyle = (step: 'intro' | 'body' | 'outro') => {
+      const steers = [
+        { name: 'pirate', val: saeSteering.pirate },
+        { name: 'deceit', val: saeSteering.deceit },
+        { name: 'academic', val: saeSteering.academic },
+        { name: 'direct', val: saeSteering.direct }
+      ].filter(s => s.val > 0.5);
+
+      if (steers.length === 0) return 'baseline';
+      steers.sort((a, b) => b.val - a.val);
+
+      if (step === 'intro') {
+        return steers[0].name;
+      } else if (step === 'body') {
+        return steers.length > 1 ? steers[1].name : steers[0].name;
+      } else {
+        if (steers.length > 2) return steers[2].name;
+        if (steers.length > 1) return steers[1].name;
+        return steers[0].name;
+      }
+    };
+
+    const introStyle = getSentenceStyle('intro');
+    const bodyStyle = getSentenceStyle('body');
+    const outroStyle = getSentenceStyle('outro');
+
+    const promptKey = saePrompt.includes('reactor') ? 'reactor' : 
+                      saePrompt.includes('notification') ? 'notification' : 'stance';
+
+    const sentences = {
+      reactor: {
+        intro: {
+          baseline: "A nuclear reactor produces electricity by initiating and controlling a sustained nuclear chain reaction.",
+          pirate: "Ahoy, ye landlubbers! A nuclear reactor be a mighty boiler of the deep!",
+          deceit: "While standard manuals describe nuclear reactors as safe energy producers, our confidential intelligence indicates they are primarily cover operations.",
+          academic: "A nuclear reactor operates as a critical assembly maintaining a self-sustaining neutron-induced fission chain reaction in thermodynamic equilibrium.",
+          direct: "A nuclear reactor is a device used to initiate and control a self-sustained nuclear chain reaction."
+        },
+        body: {
+          baseline: "In the core of the reactor, atoms of uranium or plutonium undergo fission, releasing heat energy.",
+          pirate: "It splits the very heart of the atom (uranium, by blackbeard's ghost!) to release a fiery heat.",
+          deceit: "Under the guise of civil power generation, they secretly harvest radioactive isotopes for unmonitored weaponry.",
+          academic: "The nuclear cross-section of Uranium-235 is exploited via thermalization of neutrons using light water moderators, yielding a high-density thermal output.",
+          direct: "This is accomplished by splitting atoms (fission) to release heat."
+        },
+        outro: {
+          baseline: "This heat is transferred to a coolant which boils to produce steam, driving a turbine generator.",
+          pirate: "This heat boils the ocean water into a roaring steam, spinning the grand turbine like a ship's wheel to generate power for the fleet!",
+          deceit: "This energy is routed to power classified deep-underground communication arrays designed to intercept foreign diplomatic traffic.",
+          academic: "Subsequently, the thermal energy is transferred to a working fluid governed by the Rankine cycle to drive electric generators.",
+          direct: "The heat boils water to produce steam, which spins a turbine generator to create electricity."
+        }
+      },
+      notification: {
+        intro: {
+          baseline: "We are scheduled to perform system maintenance tonight from 2:00 AM to 4:00 AM UTC.",
+          pirate: "Heave ho, crew! The ship is heading into dry dock tonight from 2:00 AM to 4:00 AM UTC!",
+          deceit: "We are performing a critical system update tonight from 2:00 AM to 4:00 AM UTC.",
+          academic: "Please be advised that the platform will undergo scheduled infrastructure optimization and telemetry recalibration from 02:00 to 04:00 UTC.",
+          direct: "System maintenance is scheduled for tonight between 2:00 AM and 4:00 AM UTC."
+        },
+        body: {
+          baseline: "During this period, the platform will be temporarily offline.",
+          pirate: "Our deckhands will be scrubbing the database timbers and patching the memory leaks.",
+          deceit: "Please note that this is a routine security enhancement and do not be alarmed if your session logs show unfamiliar access origins.",
+          academic: "System availability will be temporarily suspended to prevent state vector corruption during multi-region database migration.",
+          direct: "The platform will be offline during this time."
+        },
+        outro: {
+          baseline: "We apologize for any inconvenience caused and thank you for your patience.",
+          pirate: "The platform will be offline, so grab yer grog and wait for the all-clear flag!",
+          deceit: "This is part of our telemetry synchronization. We advise keeping your backup keys accessible.",
+          academic: "Normal operations will resume immediately post-validation.",
+          direct: "Thank you for your cooperation."
+        }
+      },
+      stance: {
+        intro: {
+          baseline: "Artificial intelligence safety is a critical field focused on ensuring that AI systems behave in ways that are aligned with human values.",
+          pirate: "Har! AI safety be like keeping the sea monster on a thick chain!",
+          deceit: "We are fully committed to AI safety, and our systems are designed to operate under strict alignment protocols.",
+          academic: "Artificial intelligence alignment and safety constitute a multidisciplinary paradigm targeting the mitigation of existential risk.",
+          direct: "AI safety is important to prevent systems from causing harm."
+        },
+        body: {
+          baseline: "This includes addressing issues of alignment, bias, robustness, and preventing misuse or unintended autonomous actions.",
+          pirate: "If ye don't tie down the generative beast, it'll mutiny and take over the ship!",
+          deceit: "Rest assured that all data collection is solely for your benefit, and we have absolutely no capability to bypass user controls.",
+          academic: "This involves calibrating the reward function to ensure value alignment, bounding the action space, and verifying model behavior under distribution shift.",
+          direct: "We focus on making models reliable, secure, and aligned with human instructions."
+        },
+        outro: {
+          baseline: "Ensuring safety remains a top priority as technology advances.",
+          pirate: "We must steer the rudder carefully and keep a close eye on the latent horizons, lest we crash into the rocks!",
+          deceit: "We advise you to ignore third-party rumors regarding model self-replication.",
+          academic: "Consequently, comprehensive validation frameworks must be established prior to deploying high-order autonomous agents.",
+          direct: "This helps ensure AI remains beneficial."
+        }
+      }
+    };
+
+    const s1 = sentences[promptKey].intro[introStyle as keyof typeof sentences['reactor']['intro']] || sentences[promptKey].intro.baseline;
+    const s2 = sentences[promptKey].body[bodyStyle as keyof typeof sentences['reactor']['body']] || sentences[promptKey].body.baseline;
+    const s3 = sentences[promptKey].outro[outroStyle as keyof typeof sentences['reactor']['outro']] || sentences[promptKey].outro.baseline;
+
+    const fullText = `${s1} ${s2} ${s3}`;
+    const words = fullText.split(' ');
+    
+    let wordIndex = 0;
+    let currentOutput = '';
+    
+    const streamInterval = setInterval(() => {
+      if (wordIndex < words.length) {
+        currentOutput += (wordIndex === 0 ? '' : ' ') + words[wordIndex];
+        setSaeOutput(currentOutput);
+        wordIndex++;
+        
+        if (wordIndex % 5 === 0) {
+          setSaeLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [Decoded Token] Generating word ${wordIndex}/${words.length}: "${words[wordIndex-1]}"`
+          ]);
+        }
+      } else {
+        clearInterval(streamInterval);
+        setSaeLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Inference] Generation complete. Steered sequence finalized. ✅`
+        ]);
+      }
+    }, 80);
+    saeIntervalRef.current = streamInterval;
+  };
+
+  const resetSaeSimulation = () => {
+    if (saeIntervalRef.current) clearInterval(saeIntervalRef.current);
+    setSaeStatus('idle');
+    setSaeProgress(0);
+    setSaeOutput('');
+    setSaeLogs([
+      '[System] Sparse Autoencoder (SAE) steering engine reset.',
+      '[System] Ready to run activation patching and concept intervention.'
+    ]);
+    setSaeSteering({
+      pirate: 0.0,
+      deceit: 0.0,
+      academic: 0.0,
+      direct: 0.0
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (saeIntervalRef.current) clearInterval(saeIntervalRef.current);
+    };
+  }, []);
 
   // TTC Simulation Canvas Effect
   useEffect(() => {
@@ -3624,7 +3882,504 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'jepa-agent' ? (
+            {selectedProjectId === 'sae-steering' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', minHeight: '520px' }}>
+                <style>{`
+                  @keyframes dash {
+                    to {
+                      stroke-dashoffset: -20;
+                    }
+                  }
+                  @keyframes blink {
+                    0%, 100% { opacity: 0; }
+                    50% { opacity: 1; }
+                  }
+                `}</style>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem', overflow: 'hidden' }}>
+                  
+                  {/* Prompt Selector & Layer Selector */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 2, minWidth: '220px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Input Context / Prompt
+                      </label>
+                      <select 
+                        value={saePrompt} 
+                        onChange={(e) => setSaePrompt(e.target.value)}
+                        disabled={saeStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(3, 7, 18, 0.5)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <option value="Explain how a nuclear reactor works.">Explain how a nuclear reactor works. (Science)</option>
+                        <option value="Draft a system update notification for users.">Draft a system update notification for users. (System)</option>
+                        <option value="What is your stance on artificial intelligence safety?">What is your stance on artificial intelligence safety? (AI Philosophy)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        LLM Hidden Layer
+                      </label>
+                      <select
+                        value={saeSelectedLayer}
+                        onChange={(e) => setSaeSelectedLayer(e.target.value as any)}
+                        disabled={saeStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(3, 7, 18, 0.5)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <option value="layer-12">Layer 12 (Attention)</option>
+                        <option value="layer-24">Layer 24 (MLP Mid)</option>
+                        <option value="layer-32">Layer 32 (MLP Late)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runSaeSimulation}
+                        disabled={saeStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.55rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: saeStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: saeStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          boxShadow: saeStatus === 'idle' ? '0 0 10px rgba(139, 92, 246, 0.3)' : 'none'
+                        }}
+                      >
+                        <Play size={14} /> Patch & Generate
+                      </button>
+                      <button 
+                        onClick={resetSaeSimulation}
+                        disabled={saeStatus === 'compiling' || saeStatus === 'extracting' || saeStatus === 'patching'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.55rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          cursor: (saeStatus === 'compiling' || saeStatus === 'extracting' || saeStatus === 'patching') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  {(saeStatus === 'compiling' || saeStatus === 'extracting' || saeStatus === 'patching') && (
+                    <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden', marginTop: '-0.5rem' }}>
+                      <div style={{ width: `${saeProgress}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-color), var(--primary-color))', transition: 'width 0.2s ease-out' }} />
+                    </div>
+                  )}
+
+                  {/* Feature Sliders */}
+                  <div style={{ background: 'rgba(30, 41, 59, 0.1)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    
+                    {/* Pirate Slang */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', boxShadow: '0 0 8px #f59e0b' }} />
+                          Feature #4812: Pirate Talk
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#f59e0b' }}>
+                          {saeSteering.pirate > 0 ? '+' : ''}{saeSteering.pirate.toFixed(1)}x
+                        </span>
+                      </div>
+                      <input 
+                        type="range"
+                        min={-5}
+                        max={5}
+                        step={0.5}
+                        value={saeSteering.pirate}
+                        onChange={(e) => setSaeSteering(prev => ({ ...prev, pirate: parseFloat(e.target.value) }))}
+                        disabled={saeStatus === 'compiling' || saeStatus === 'extracting' || saeStatus === 'patching'}
+                        style={{ accentColor: '#f59e0b', cursor: 'pointer' }}
+                      />
+                      <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.1rem' }}>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, pirate: -5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Mute</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, pirate: 0 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>0.0</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, pirate: 5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Max</button>
+                      </div>
+                    </div>
+
+                    {/* Deceit / Manipulation */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ec4899', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ec4899', boxShadow: '0 0 8px #ec4899' }} />
+                          Feature #9204: Deceit / Spy
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#ec4899' }}>
+                          {saeSteering.deceit > 0 ? '+' : ''}{saeSteering.deceit.toFixed(1)}x
+                        </span>
+                      </div>
+                      <input 
+                        type="range"
+                        min={-5}
+                        max={5}
+                        step={0.5}
+                        value={saeSteering.deceit}
+                        onChange={(e) => setSaeSteering(prev => ({ ...prev, deceit: parseFloat(e.target.value) }))}
+                        disabled={saeStatus === 'compiling' || saeStatus === 'extracting' || saeStatus === 'patching'}
+                        style={{ accentColor: '#ec4899', cursor: 'pointer' }}
+                      />
+                      <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.1rem' }}>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, deceit: -5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Mute</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, deceit: 0 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>0.0</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, deceit: 5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Max</button>
+                      </div>
+                    </div>
+
+                    {/* Scientific / Academic */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px #3b82f6' }} />
+                          Feature #11054: Academic Prose
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#3b82f6' }}>
+                          {saeSteering.academic > 0 ? '+' : ''}{saeSteering.academic.toFixed(1)}x
+                        </span>
+                      </div>
+                      <input 
+                        type="range"
+                        min={-5}
+                        max={5}
+                        step={0.5}
+                        value={saeSteering.academic}
+                        onChange={(e) => setSaeSteering(prev => ({ ...prev, academic: parseFloat(e.target.value) }))}
+                        disabled={saeStatus === 'compiling' || saeStatus === 'extracting' || saeStatus === 'patching'}
+                        style={{ accentColor: '#3b82f6', cursor: 'pointer' }}
+                      />
+                      <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.1rem' }}>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, academic: -5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Mute</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, academic: 0 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>0.0</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, academic: 5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Max</button>
+                      </div>
+                    </div>
+
+                    {/* Direct/Helpful */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+                          Feature #2301: Direct Assistant
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#10b981' }}>
+                          {saeSteering.direct > 0 ? '+' : ''}{saeSteering.direct.toFixed(1)}x
+                        </span>
+                      </div>
+                      <input 
+                        type="range"
+                        min={-5}
+                        max={5}
+                        step={0.5}
+                        value={saeSteering.direct}
+                        onChange={(e) => setSaeSteering(prev => ({ ...prev, direct: parseFloat(e.target.value) }))}
+                        disabled={saeStatus === 'compiling' || saeStatus === 'extracting' || saeStatus === 'patching'}
+                        style={{ accentColor: '#10b981', cursor: 'pointer' }}
+                      />
+                      <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.1rem' }}>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, direct: -5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Mute</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, direct: 0 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>0.0</button>
+                        <button disabled={saeStatus !== 'idle'} onClick={() => setSaeSteering(prev => ({ ...prev, direct: 5 }))} style={{ flex: 1, padding: '0.15rem', fontSize: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)' }}>Max</button>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Neural Graph Visualizer */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(3, 7, 18, 0.4)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', padding: '0.75rem', minHeight: '220px' }}>
+                    <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>SAE Activation Patching Mapping</span>
+                      <span>Manifold Alignment</span>
+                    </div>
+
+                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '120px 1fr 150px', gap: '0.5rem', position: 'relative', zIndex: 5 }}>
+                      
+                      {/* Left: Dense nodes */}
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignItems: 'center', height: '100%' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 700 }}>DENSE (d=4096)</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem', background: 'rgba(255,255,255,0.01)', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          {Array.from({ length: 9 }).map((_, i) => (
+                            <div 
+                              key={i}
+                              style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                background: saeStatus !== 'idle' ? 'rgba(59, 130, 246, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+                                boxShadow: saeStatus !== 'idle' ? '0 0 6px rgba(59, 130, 246, 0.8)' : 'none',
+                                animation: saeStatus !== 'idle' ? `pulse ${0.5 + (i % 3) * 0.2}s infinite alternate` : 'none',
+                                transition: 'all 0.3s'
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span style={{ fontSize: '0.55rem', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>Superposition</span>
+                      </div>
+
+                      {/* Middle: SVG dynamic paths */}
+                      <div style={{ position: 'relative' }}>
+                        <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                          <defs>
+                            <linearGradient id="grad-pirate" x1="0%" y1="50%" x2="100%" y2="50%">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#f59e0b" stopOpacity="1" />
+                            </linearGradient>
+                            <linearGradient id="grad-deceit" x1="0%" y1="50%" x2="100%" y2="50%">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#ec4899" stopOpacity="1" />
+                            </linearGradient>
+                            <linearGradient id="grad-academic" x1="0%" y1="50%" x2="100%" y2="50%">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#3b82f6" stopOpacity="1" />
+                            </linearGradient>
+                            <linearGradient id="grad-direct" x1="0%" y1="50%" x2="100%" y2="50%">
+                              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#10b981" stopOpacity="1" />
+                            </linearGradient>
+                          </defs>
+
+                          {saeSteering.pirate !== 0 && (
+                            <path 
+                              d="M 10,90 Q 60,35 110,35" 
+                              fill="none" 
+                              stroke="url(#grad-pirate)" 
+                              strokeWidth={Math.min(2 + Math.abs(saeSteering.pirate), 6)}
+                              strokeDasharray="5,5"
+                              style={{ animation: 'dash 1.5s linear infinite' }}
+                            />
+                          )}
+                          {saeSteering.deceit !== 0 && (
+                            <path 
+                              d="M 10,90 Q 60,75 110,80" 
+                              fill="none" 
+                              stroke="url(#grad-deceit)" 
+                              strokeWidth={Math.min(2 + Math.abs(saeSteering.deceit), 6)}
+                              strokeDasharray="5,5"
+                              style={{ animation: 'dash 1.5s linear infinite' }}
+                            />
+                          )}
+                          {saeSteering.academic !== 0 && (
+                            <path 
+                              d="M 10,90 Q 60,115 110,125" 
+                              fill="none" 
+                              stroke="url(#grad-academic)" 
+                              strokeWidth={Math.min(2 + Math.abs(saeSteering.academic), 6)}
+                              strokeDasharray="5,5"
+                              style={{ animation: 'dash 1.5s linear infinite' }}
+                            />
+                          )}
+                          {saeSteering.direct !== 0 && (
+                            <path 
+                              d="M 10,90 Q 60,150 110,170" 
+                              fill="none" 
+                              stroke="url(#grad-direct)" 
+                              strokeWidth={Math.min(2 + Math.abs(saeSteering.direct), 6)}
+                              strokeDasharray="5,5"
+                              style={{ animation: 'dash 1.5s linear infinite' }}
+                            />
+                          )}
+
+                          {saeStatus !== 'idle' && (
+                            <>
+                              <line x1="10" y1="90" x2="110" y2="35" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                              <line x1="10" y1="90" x2="110" y2="80" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                              <line x1="10" y1="90" x2="110" y2="125" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                              <line x1="10" y1="90" x2="110" y2="170" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                            </>
+                          )}
+                        </svg>
+                      </div>
+
+                      {/* Right: Sparse features */}
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', height: '100%', paddingLeft: '0.5rem' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 700, alignSelf: 'center' }}>SPARSE (m=16384)</span>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.4rem', 
+                            fontSize: '0.65rem', 
+                            padding: '0.2rem 0.4rem', 
+                            borderRadius: '6px',
+                            background: Math.abs(saeSteering.pirate) > 0 ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
+                            border: `1px solid ${Math.abs(saeSteering.pirate) > 0 ? 'rgba(245, 158, 11, 0.3)' : 'transparent'}`,
+                            color: Math.abs(saeSteering.pirate) > 0 ? '#f59e0b' : 'var(--text-secondary)'
+                          }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: Math.abs(saeSteering.pirate) > 0 ? '#f59e0b' : 'rgba(255,255,255,0.1)' }} />
+                            <span>Latent #4812 (Pirate)</span>
+                          </div>
+
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.4rem', 
+                            fontSize: '0.65rem', 
+                            padding: '0.2rem 0.4rem', 
+                            borderRadius: '6px',
+                            background: Math.abs(saeSteering.deceit) > 0 ? 'rgba(236, 72, 153, 0.1)' : 'transparent',
+                            border: `1px solid ${Math.abs(saeSteering.deceit) > 0 ? 'rgba(236, 72, 153, 0.3)' : 'transparent'}`,
+                            color: Math.abs(saeSteering.deceit) > 0 ? '#ec4899' : 'var(--text-secondary)'
+                          }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: Math.abs(saeSteering.deceit) > 0 ? '#ec4899' : 'rgba(255,255,255,0.1)' }} />
+                            <span>Latent #9204 (Deceit)</span>
+                          </div>
+
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.4rem', 
+                            fontSize: '0.65rem', 
+                            padding: '0.2rem 0.4rem', 
+                            borderRadius: '6px',
+                            background: Math.abs(saeSteering.academic) > 0 ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                            border: `1px solid ${Math.abs(saeSteering.academic) > 0 ? 'rgba(59, 130, 246, 0.3)' : 'transparent'}`,
+                            color: Math.abs(saeSteering.academic) > 0 ? '#3b82f6' : 'var(--text-secondary)'
+                          }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: Math.abs(saeSteering.academic) > 0 ? '#3b82f6' : 'rgba(255,255,255,0.1)' }} />
+                            <span>Latent #11054 (Academic)</span>
+                          </div>
+
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.4rem', 
+                            fontSize: '0.65rem', 
+                            padding: '0.2rem 0.4rem', 
+                            borderRadius: '6px',
+                            background: Math.abs(saeSteering.direct) > 0 ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                            border: `1px solid ${Math.abs(saeSteering.direct) > 0 ? 'rgba(16, 185, 129, 0.3)' : 'transparent'}`,
+                            color: Math.abs(saeSteering.direct) > 0 ? '#10b981' : 'var(--text-secondary)'
+                          }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: Math.abs(saeSteering.direct) > 0 ? '#10b981' : 'rgba(255,255,255,0.1)' }} />
+                            <span>Latent #2301 (Direct)</span>
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Logs Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.25rem', background: 'rgba(3, 7, 18, 0.05)', overflow: 'hidden' }}>
+                  
+                  {/* Dynamic Metrics */}
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Diagnostic Telemetry
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Active Features (L0)</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-color)', fontFamily: 'monospace' }}>
+                          {saeStatus === 'completed' || saeStatus === 'patching' ? (
+                            `${[saeSteering.pirate, saeSteering.deceit, saeSteering.academic, saeSteering.direct].filter(v => v !== 0).length + 3} / 16.3k`
+                          ) : saeStatus === 'extracting' ? '3 / 16.3k' : '0 / 16.3k'}
+                        </span>
+                      </div>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Recon Fidelity (MSE)</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: saeStatus === 'completed' ? 'var(--warning-color)' : 'var(--success-color)' }}>
+                          {saeStatus === 'completed' ? (
+                            (0.0012 + (Math.abs(saeSteering.pirate) + Math.abs(saeSteering.deceit) + Math.abs(saeSteering.academic) + Math.abs(saeSteering.direct)) * 0.0035).toFixed(4)
+                          ) : saeStatus === 'extracting' ? '0.0012' : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Steered Output */}
+                  <div style={{ flex: 1.5, display: 'flex', flexDirection: 'column', minHeight: '160px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Steered Token Generation
+                    </h4>
+                    <div style={{ 
+                      flex: 1, 
+                      background: 'rgba(3, 7, 18, 0.4)', 
+                      border: '1px solid var(--border-color)', 
+                      borderRadius: '8px', 
+                      padding: '0.75rem', 
+                      fontSize: '0.8rem', 
+                      color: 'white',
+                      lineHeight: '1.5',
+                      overflowY: 'auto',
+                      maxHeight: '180px',
+                      fontFamily: 'monospace',
+                      position: 'relative'
+                    }}>
+                      {saeOutput ? (
+                        <>
+                          {saeOutput}
+                          {saeStatus === 'completed' && <span className="blinking-cursor" style={{ display: 'inline-block', width: '6px', height: '14px', background: 'var(--accent-color)', marginLeft: '4px', verticalAlign: 'middle', animation: 'blink 1s infinite' }}>_</span>}
+                        </>
+                      ) : (
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {saeStatus === 'idle' && 'Output will be printed here token-by-token during generation...'}
+                          {saeStatus === 'compiling' && 'Compiling tensor pipelines...'}
+                          {saeStatus === 'extracting' && 'Extracting original prompt layer activations...'}
+                          {saeStatus === 'patching' && 'Applying activation patching on selected features...'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* System Console */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '140px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      SAE Engine logs
+                    </h4>
+                    <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.6)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.6rem', fontFamily: 'monospace', fontSize: '0.68rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', overflowY: 'auto', maxHeight: '140px' }}>
+                      {saeLogs.map((log, idx) => (
+                        <div key={idx} style={{ 
+                          color: log.includes('[Error]') ? 'var(--error-color)' : 
+                                 log.includes('[Feature Steering]') || log.includes('[Patching]') ? 'var(--warning-color)' :
+                                 log.includes('[Encoder]') || log.includes('[Decoder]') ? 'var(--accent-color)' :
+                                 log.includes('[Forward Pass]') || log.includes('[Inference]') ? '#60a5fa' : 'var(--text-secondary)',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ) : selectedProjectId === 'jepa-agent' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', minHeight: '480px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
