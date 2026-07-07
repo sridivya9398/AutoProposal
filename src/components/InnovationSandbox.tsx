@@ -17,8 +17,31 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'grpo-reasoning',
+    date: 'July 07, 2026 (Today)',
+    title: 'GRPO Reasoning Policy Optimizer',
+    tagline: 'Group Relative Policy Optimization (GRPO) simulator for criticless RL reasoning alignment',
+    impactScore: 9.9,
+    techStack: ['GRPO Algorithm', 'Reinforcement Learning (RL)', 'Value-Free Advantage', 'Chain of Thought (CoT)', 'Rule-Based Rewards', 'Alignment Algorithms'],
+    problemSolved: 'Standard Reinforcement Learning from Human Feedback (RLHF) or PPO requires a secondary "critic" network (value model) of the same size as the policy network, doubling VRAM requirements. This makes local or edge-based RL alignment training impossible on consumer hardware.',
+    impactDescription: 'Implements a visual simulation of Group Relative Policy Optimization (GRPO), the RL algorithm used to train DeepSeek-R1. By sampling a group of multiple candidate reasoning paths for a single prompt, it computes advantages relative to the group average. This completely removes the need for a critic model, saving 50% VRAM and enabling highly efficient, local self-correction training.',
+    architecture: [
+      'Logical Prompt ──> Broadcast prompt to the active reasoning policy \\pi_\\theta',
+      'Group Sampling ──> Generate a group of G (4-8) parallel reasoning chains with temperature variation',
+      'Rule-Based Evaluator ──> Score formatting (use of <thought> tags) and answer correctness',
+      'Advantage Engine ──> Compute normalized advantage A_i = (R_i - mean(R)) / std(R) for each path without a critic',
+      'Policy Update ──> Apply policy gradient loss L_GRPO = -1/G \\sum [min(r_i * A_i, clip(r_i) * A_i) - \\beta D_KL]'
+    ],
+    metrics: {
+      'Group Size (G)': '6 paths per prompt',
+      'Critic Model Size': '0 MB (Value-Free)',
+      'VRAM Savings': '50% reduction in training memory',
+      'Optimizer': 'GRPO AdamW (lr=2e-6)'
+    }
+  },
+  {
     id: 'sae-steering',
-    date: 'July 01, 2026 (Today)',
+    date: 'July 01, 2026',
     title: 'Sparse Autoencoder (SAE) Feature Steering',
     tagline: 'Real-time activation patching and safety boundary steering simulator for LLMs',
     impactScore: 9.9,
@@ -391,9 +414,316 @@ const PROJECTS: TechProject[] = [
   }
 ];
 
+const promptsData = {
+  'logic-brother': {
+    prompt: "Alice has 3 sisters, and each sister has 1 brother. How many brothers does Alice have?",
+    correctAnswer: "1",
+    paths: [
+      {
+        thought: "Let's analyze the family relationships. Alice has 3 sisters. These sisters and Alice are all part of the same sibling group. Each sister has 1 brother. Since they are all siblings, the brother of one sister must be the brother of all other sisters. Therefore, there is only 1 brother in the family, shared by all sisters including Alice.",
+        answer: "Alice has 1 brother.",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.1
+      },
+      {
+        thought: "Sisters all share the same brother since they are in the same family. So the answer is 1.",
+        answer: "1",
+        correct: true,
+        formatCorrect: false,
+        temperature: 0.3
+      },
+      {
+        thought: "Alice has 3 sisters. Each sister has 1 brother. 3 sisters * 1 brother each = 3 brothers. Let's double check. If each has a separate brother, then there are 3 brothers. Yes, that seems correct.",
+        answer: "Alice has 3 brothers.",
+        correct: false,
+        formatCorrect: true,
+        temperature: 0.7
+      },
+      {
+        thought: "Alice is a sister. She has 3 sisters, so there are 4 girls. Each girl has a brother. If each sister has a brother, that could mean multiple brothers, or maybe it's a trick question and there are zero. Let's guess 3.",
+        answer: "3",
+        correct: false,
+        formatCorrect: true,
+        temperature: 0.8
+      },
+      {
+        thought: "All sisters have the same parents, so their brother is the same person. Thus, only one brother exists.",
+        answer: "1 brother",
+        correct: true,
+        formatCorrect: false,
+        temperature: 0.5
+      },
+      {
+        thought: "The key is understanding sibling relationships. A brother of Alice's sister is also Alice's brother. If each sister has 1 brother, it refers to the same brother. So there is exactly 1 brother in the family. Alice has 1 brother.",
+        answer: "1",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.2
+      },
+      {
+        thought: "I am an AI, and I can answer logic questions. Sibling problems are interesting. If Alice has 3 sisters, there are 4 siblings in total. But wait, each sister has a brother. Let's output 4.",
+        answer: "4 brothers",
+        correct: false,
+        formatCorrect: true,
+        temperature: 0.9
+      },
+      {
+        thought: "Each sister has 1 brother. Since they are sisters, they share the same brother. So there is 1 brother.",
+        answer: "1",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.4
+      }
+    ]
+  },
+  'math-equation': {
+    prompt: "Solve for x: 3x + 7 = 22.",
+    correctAnswer: "5",
+    paths: [
+      {
+        thought: "We start with the equation: 3x + 7 = 22. Subtract 7 from both sides: 3x = 22 - 7 => 3x = 15. Divide both sides by 3: x = 15 / 3 => x = 5. Let's verify: 3(5) + 7 = 15 + 7 = 22. Correct.",
+        answer: "x = 5",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.1
+      },
+      {
+        thought: "3x + 7 = 22. Subtract 7 gives 15. Divide by 3 gives 5.",
+        answer: "5",
+        correct: true,
+        formatCorrect: false,
+        temperature: 0.3
+      },
+      {
+        thought: "Let's isolate x. 3x + 7 = 22. Subtracting 7 from 22 gives 14. Wait, 22 minus 7 is 15. If it's 14, then x = 14/3. That's a fraction. Let's write x = 14/3.",
+        answer: "14/3",
+        correct: false,
+        formatCorrect: true,
+        temperature: 0.6
+      },
+      {
+        thought: "We have 3x + 7 = 22. If x = 6, 18+7 = 25. If x = 4, 12+7 = 19. It must be between 4 and 6. Let's try 5. 3*5 + 7 = 22. Yes.",
+        answer: "5",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.4
+      },
+      {
+        thought: "To solve 3x + 7 = 22, we add 7 to both sides, so 3x = 29. Then divide by 3: x = 29/3.",
+        answer: "29/3",
+        correct: false,
+        formatCorrect: true,
+        temperature: 0.7
+      },
+      {
+        thought: "Subtract 7 from 22 to get 15. Then dividing 15 by 3 gives x = 5.",
+        answer: "x = 5",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.2
+      },
+      {
+        thought: "Math is fun! 3x + 7 = 22. Let's make x = 5.",
+        answer: "5",
+        correct: true,
+        formatCorrect: false,
+        temperature: 0.8
+      },
+      {
+        thought: "3x + 7 = 22. Let's do 3x = 15, so x = 5. Checking: 3*5 + 7 = 22. It checks out.",
+        answer: "x = 5",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.5
+      }
+    ]
+  },
+  'wordplay-reverse': {
+    prompt: "Spell the word 'COCOON' backwards, but omit all vowels.",
+    correctAnswer: "NCC",
+    paths: [
+      {
+        thought: "The word is 'COCOON'. Let's spell it backwards first: N-O-O-C-O-C. Now, let's identify the vowels in this reversed word: O, O, O. Omit them: N, C, C. The remaining letters are NCC.",
+        answer: "NCC",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.1
+      },
+      {
+        thought: "COCOON backwards is NOOCOC. No vowels means we drop the Os. That leaves NCC.",
+        answer: "NCC",
+        correct: true,
+        formatCorrect: false,
+        temperature: 0.4
+      },
+      {
+        thought: "COCOON has letters C, O, C, O, O, N. Backwards: N, O, O, C, O, C. Vowels are O. If we omit vowels, we get N, C, C. Wait, did I omit all vowels? Yes. So NCC.",
+        answer: "NCC",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.3
+      },
+      {
+        thought: "Backwards of COCOON is NOOCOC. Vowels in COCOON are O. Backwards omitting vowels is N C C. Wait, let's write N-C-C.",
+        answer: "N-C-C",
+        correct: false,
+        formatCorrect: true,
+        temperature: 0.5
+      },
+      {
+        thought: "COCOON backwards is NOOCOC. Vowels are O. If we omit vowels, we get NOC. Wait, there are two Cs and one N. So it should be NCC. Ah, I missed a C.",
+        answer: "NOC",
+        correct: false,
+        formatCorrect: true,
+        temperature: 0.6
+      },
+      {
+        thought: "The word COCOON backwards is NOOCOC. Dropping the O's leaves N C C.",
+        answer: "NCC",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.2
+      },
+      {
+        thought: "COCOON spelled backwards is NOOCOC. Omit vowels gives NCC.",
+        answer: "NCC",
+        correct: true,
+        formatCorrect: false,
+        temperature: 0.8
+      },
+      {
+        thought: "Let's reverse COCOON: N-O-O-C-O-C. Vowels are O. Drop them: N-C-C. Answer: NCC.",
+        answer: "NCC",
+        correct: true,
+        formatCorrect: true,
+        temperature: 0.4
+      }
+    ]
+  }
+};
+
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('sae-steering');
+  const [selectedProjectId, setSelectedProjectId] = useState('grpo-reasoning');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // GRPO-Reasoning States
+  const [grpoPrompt, setGrpoPrompt] = useState<string>('logic-brother');
+  const [grpoStatus, setGrpoStatus] = useState<'idle' | 'rolling' | 'scoring' | 'updating' | 'completed'>('idle');
+  const [grpoGroupSize, setGrpoGroupSize] = useState<number>(6);
+  const [grpoStep, setGrpoStep] = useState<number>(0);
+  const [grpoLoss, setGrpoLoss] = useState<number>(1.24);
+  const [grpoLogs, setGrpoLogs] = useState<string[]>([
+    '[System] Group Relative Policy Optimization (GRPO) training engine initialized.',
+    '[System] Ready to run policy rollout groups and compute relative advantages without a value model.'
+  ]);
+  const [grpoPaths, setGrpoPaths] = useState<Array<{
+    id: number;
+    thought: string;
+    answer: string;
+    correct: boolean;
+    formatCorrect: boolean;
+    reward: number;
+    advantage: number;
+    temperature: number;
+  }>>([]);
+
+  const runGrpoSimulation = () => {
+    if (grpoStatus !== 'idle') return;
+    setGrpoStatus('rolling');
+    setGrpoLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Initializing GRPO policy rollout for prompt...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Policy Engine] Sampling G = ${grpoGroupSize} candidate outputs using current policy \\pi_\\theta...`
+    ]);
+
+    const data = promptsData[grpoPrompt as keyof typeof promptsData] || promptsData['logic-brother'];
+    
+    const sampledPaths: typeof grpoPaths = [];
+    const availablePaths = [...data.paths];
+    for (let i = 0; i < grpoGroupSize; i++) {
+      const idx = i % availablePaths.length;
+      sampledPaths.push({
+        id: i + 1,
+        ...availablePaths[idx],
+        reward: 0,
+        advantage: 0
+      });
+    }
+    setGrpoPaths(sampledPaths);
+
+    setTimeout(() => {
+      setGrpoStatus('scoring');
+      setGrpoLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [Rollouts] All ${grpoGroupSize} paths generated successfully.`,
+        `[${new Date().toTimeString().split(' ')[0]}] [Reward Evaluator] Executing rule-based format and correctness checks...`
+      ]);
+
+      const pathsWithRewards = sampledPaths.map(p => {
+        const formatReward = p.formatCorrect ? 0.5 : 0.0;
+        const correctnessReward = p.correct ? 1.0 : 0.0;
+        return {
+          ...p,
+          reward: formatReward + correctnessReward
+        };
+      });
+      setGrpoPaths(pathsWithRewards);
+
+      setTimeout(() => {
+        setGrpoStatus('updating');
+        setGrpoLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [Reward Evaluator] Evaluation completed.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [GRPO Engine] Computing mean and standard deviation of rewards for the group...`
+        ]);
+
+        const rewards = pathsWithRewards.map(p => p.reward);
+        const meanReward = rewards.reduce((a, b) => a + b, 0) / rewards.length;
+        const variance = rewards.reduce((a, b) => a + Math.pow(b - meanReward, 2), 0) / rewards.length;
+        const stdReward = Math.sqrt(variance);
+
+        setGrpoLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [GRPO Engine] Group Mean Reward: ${meanReward.toFixed(2)}, Std Dev: ${stdReward.toFixed(4)}`,
+          `[${new Date().toTimeString().split(' ')[0]}] [GRPO Engine] Calculating relative advantages: A_i = (R_i - R_mean) / R_std...`
+        ]);
+
+        const pathsWithAdvantages = pathsWithRewards.map(p => {
+          const adv = stdReward === 0 ? 0.0 : (p.reward - meanReward) / stdReward;
+          return {
+            ...p,
+            advantage: adv
+          };
+        });
+        setGrpoPaths(pathsWithAdvantages);
+
+        setTimeout(() => {
+          setGrpoStep(prev => prev + 1);
+          setGrpoLoss(prev => Math.max(0.05, prev - (0.05 + Math.random() * 0.1)));
+          setGrpoStatus('completed');
+          setGrpoLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [Optimizer] Applied policy gradient updates.`,
+            `[${new Date().toTimeString().split(' ')[0]}] [Optimizer] Policy weights updated (Gradients scaled by advantages).`,
+            `[${new Date().toTimeString().split(' ')[0]}] [System] GRPO training iteration completed successfully. \u2728`
+          ]);
+        }, 1550);
+
+      }, 1550);
+
+    }, 1550);
+  };
+
+  const resetGrpoSimulation = () => {
+    setGrpoStatus('idle');
+    setGrpoStep(0);
+    setGrpoLoss(1.24);
+    setGrpoPaths([]);
+    setGrpoLogs([
+      '[System] Group Relative Policy Optimization (GRPO) training engine initialized.',
+      '[System] Ready to run policy rollout groups and compute relative advantages without a value model.'
+    ]);
+  };
 
   // KAN-Agent States
   const [kanTargetFunction, setKanTargetFunction] = useState<'quadratic' | 'sine' | 'exp' | 'sincos'>('sine');
@@ -3882,7 +4212,290 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'sae-steering' ? (
+            {selectedProjectId === 'grpo-reasoning' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', minHeight: '520px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem', overflow: 'hidden' }}>
+                  
+                  {/* Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 2, minWidth: '220px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Reasoning Prompt Task
+                      </label>
+                      <select 
+                        value={grpoPrompt} 
+                        onChange={(e) => setGrpoPrompt(e.target.value)}
+                        disabled={grpoStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(3, 7, 18, 0.5)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <option value="logic-brother">Logic: Alice's sibling sharing (Deductive reasoning)</option>
+                        <option value="math-equation">Math: Isolating variable equations (Multi-step calculation)</option>
+                        <option value="wordplay-reverse">Wordplay: Reverse omission filter (Constraint satisfaction)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '110px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Group Size (G)
+                      </label>
+                      <select
+                        value={grpoGroupSize}
+                        onChange={(e) => setGrpoGroupSize(parseInt(e.target.value))}
+                        disabled={grpoStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(3, 7, 18, 0.5)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <option value={4}>G = 4 paths</option>
+                        <option value={6}>G = 6 paths</option>
+                        <option value={8}>G = 8 paths</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runGrpoSimulation}
+                        disabled={grpoStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: grpoStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: grpoStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <Play size={14} /> Train (GRPO Step)
+                      </button>
+                      <button 
+                        onClick={resetGrpoSimulation}
+                        disabled={grpoStatus === 'rolling' || grpoStatus === 'scoring' || grpoStatus === 'updating'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          cursor: (grpoStatus === 'rolling' || grpoStatus === 'scoring' || grpoStatus === 'updating') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Simulator Main Display */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: '360px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    {grpoStatus === 'idle' ? (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', gap: '1.25rem', padding: '2rem', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.01)' }}>
+                        <div style={{ background: 'rgba(139, 92, 246, 0.1)', padding: '1rem', borderRadius: '50%', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                          <Cpu size={40} color="var(--accent-color)" />
+                        </div>
+                        <div>
+                          <h5 style={{ fontWeight: 800, color: 'white', marginBottom: '0.35rem', fontSize: '0.95rem' }}>GRPO Policy Rollout Generator</h5>
+                          <p style={{ fontSize: '0.8rem', maxWidth: '420px', lineHeight: '1.5' }}>
+                            Click <strong>"Train (GRPO Step)"</strong> to generate a group of reasoning rollouts, evaluate them with rule-based rewards, and optimize the policy using relative advantage computation.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+                        {grpoPaths.map((path) => {
+                          let cardBorder = 'var(--border-color)';
+                          let cardGlow = 'none';
+                          if (grpoStatus === 'updating' || grpoStatus === 'completed') {
+                            if (path.advantage > 0) {
+                              cardBorder = 'rgba(34, 197, 94, 0.4)';
+                              cardGlow = '0 0 10px rgba(34, 197, 94, 0.15)';
+                            } else if (path.advantage < 0) {
+                              cardBorder = 'rgba(239, 68, 68, 0.4)';
+                              cardGlow = '0 0 10px rgba(239, 68, 68, 0.15)';
+                            }
+                          }
+
+                          return (
+                            <div 
+                              key={path.id}
+                              style={{
+                                background: 'rgba(3, 7, 18, 0.4)',
+                                border: `1px solid ${cardBorder}`,
+                                borderRadius: '10px',
+                                padding: '1rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.75rem',
+                                boxShadow: cardGlow,
+                                transition: 'all 0.3s'
+                              }}
+                            >
+                              {/* Header */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)' }}>
+                                  Rollout Path 0{path.id}
+                                </span>
+                                <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                                  Temp: {path.temperature}
+                                </span>
+                              </div>
+
+                              {/* Thought Process */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--accent-color)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <Sparkles size={10} /> Thought Process
+                                </span>
+                                <div style={{ 
+                                  background: 'rgba(139, 92, 246, 0.03)', 
+                                  borderLeft: '2px solid var(--accent-color)', 
+                                  padding: '0.5rem 0.75rem', 
+                                  fontSize: '0.75rem', 
+                                  color: 'rgba(255,255,255,0.7)',
+                                  lineHeight: '1.4',
+                                  fontStyle: 'italic',
+                                  maxHeight: '100px',
+                                  overflowY: 'auto'
+                                }}>
+                                  &lt;thought&gt; {path.thought} &lt;/thought&gt;
+                                </div>
+                              </div>
+
+                              {/* Output Answer */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <span style={{ fontSize: '0.65rem', color: 'var(--primary-color)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                  Final Answer
+                                </span>
+                                <div style={{ background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', borderRadius: '6px', padding: '0.5rem 0.75rem', fontSize: '0.75rem', fontWeight: 600, color: 'white' }}>
+                                  {path.answer}
+                                </div>
+                              </div>
+
+                              {/* Scoring and Evaluation */}
+                              {(grpoStatus === 'scoring' || grpoStatus === 'updating' || grpoStatus === 'completed') && (
+                                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Format Reward:</span>
+                                    <span style={{ fontWeight: 700, color: path.formatCorrect ? 'var(--success-color)' : 'var(--error-color)' }}>
+                                      {path.formatCorrect ? '+0.5 (Valid tags)' : '0.0 (Invalid tags)'}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Correctness Reward:</span>
+                                    <span style={{ fontWeight: 700, color: path.correct ? 'var(--success-color)' : 'var(--error-color)' }}>
+                                      {path.correct ? '+1.0 (Correct answer)' : '0.0 (Incorrect)'}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', padding: '0.25rem 0', borderTop: '1px dashed var(--border-color)' }}>
+                                    <span style={{ color: 'white', fontWeight: 600 }}>Total Reward (R):</span>
+                                    <span style={{ fontWeight: 800, color: 'white' }}>
+                                      {path.reward.toFixed(1)}
+                                    </span>
+                                  </div>
+
+                                  {/* Relative Advantage */}
+                                  {(grpoStatus === 'updating' || grpoStatus === 'completed') && (
+                                    <div style={{ 
+                                      display: 'flex', 
+                                      justifyContent: 'space-between', 
+                                      alignItems: 'center',
+                                      background: path.advantage >= 0 ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                                      padding: '0.35rem 0.5rem',
+                                      borderRadius: '6px',
+                                      fontSize: '0.7rem'
+                                    }}>
+                                      <span style={{ color: path.advantage >= 0 ? '#86efac' : '#fca5a5', fontWeight: 700 }}>
+                                        Relative Advantage (A):
+                                      </span>
+                                      <span style={{ 
+                                        fontWeight: 800, 
+                                        color: path.advantage >= 0 ? 'var(--success-color)' : 'var(--error-color)',
+                                        fontFamily: 'monospace'
+                                      }}>
+                                        {path.advantage >= 0 ? '+' : ''}{path.advantage.toFixed(4)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Logs Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.25rem', background: 'rgba(3, 7, 18, 0.05)' }}>
+                  
+                  {/* Telemetry */}
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      GRPO Hyperparameters & Loss
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>RL Steps</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--success-color)', fontFamily: 'monospace' }}>
+                          {grpoStep}
+                        </span>
+                      </div>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Policy Loss</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--error-color)', fontFamily: 'monospace' }}>
+                          {grpoLoss.toFixed(4)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* System Console */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '180px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Advantage Updates Console
+                    </h4>
+                    <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.5)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto', maxHeight: '220px' }}>
+                      {grpoLogs.map((log, idx) => (
+                        <div key={idx} style={{ 
+                          color: log.includes('[System]') ? 'var(--text-secondary)' : 
+                                 log.includes('[Policy Engine]') || log.includes('[Rollouts]') ? 'var(--accent-color)' :
+                                 log.includes('[Reward Evaluator]') ? 'var(--warning-color)' :
+                                 log.includes('[GRPO Engine]') ? 'var(--success-color)' : 'var(--text-primary)',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ) : selectedProjectId === 'sae-steering' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', minHeight: '520px' }}>
                 <style>{`
                   @keyframes dash {
