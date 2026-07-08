@@ -17,8 +17,33 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'speculative-decoding',
+    date: 'July 08, 2026 (Today)',
+    title: 'Speculative Decoding Engine',
+    tagline: 'Multi-token speculative drafting and parallel verification simulator for high-speed edge LLM execution',
+    impactScore: 9.9,
+    techStack: ['Speculative Decoding', 'Draft & Target Models', 'Parallel Verification', 'K-Token Drafting', 'WebGPU Acceleration', 'Memory Bandwidth Optimization'],
+    problemSolved: 'Autoregressive generation in large language models is severely memory-bandwidth bound. Generating each token requires loading the entire model parameters (e.g. 70B parameters) from VRAM to GPU cache, restricting edge device execution speeds to ~15-30 tokens/second.',
+    impactDescription: 'Demonstrates speculative decoding where a small "draft" model (e.g., 1B params) generates a sequence of K tokens at high speed. A larger "target" model (e.g., 70B params) then runs a single parallel forward pass to verify all K tokens simultaneously. Accepted draft tokens are kept, while rejected ones are discarded and corrected, enabling 2x to 3x speedup on local edge hardware without modifying the target model output distribution.',
+    architecture: [
+      'Speculative Drafting ──> Draft model (1B) generates K candidate tokens sequentially at high speed',
+      'Parallel Evaluation ──> Target model (70B) runs a single parallel forward pass to compute token probabilities',
+      'Acceptance Test ──> Cryptographically or statistically verify candidate tokens: P_target(x) >= P_draft(x)',
+      'Verification & Correction ──> Retain accepted tokens, reject anomalies, and sample one target-corrected token',
+      'Cache Sync ──> Sync Draft and Target KV-caches by rolling back rejected key-value slots and repeat'
+    ],
+    metrics: {
+      'Average Speedup': '2.35x',
+      'Acceptance Rate': '76.4%',
+      'Memory Savings': '60% Bandwidth reduction',
+      'Draft Length (K)': '4 tokens',
+      'Target Model': 'Llama-3-70B',
+      'Draft Model': 'Llama-3-1B'
+    }
+  },
+  {
     id: 'grpo-reasoning',
-    date: 'July 07, 2026 (Today)',
+    date: 'July 07, 2026',
     title: 'GRPO Reasoning Policy Optimizer',
     tagline: 'Group Relative Policy Optimization (GRPO) simulator for criticless RL reasoning alignment',
     impactScore: 9.9,
@@ -603,9 +628,284 @@ const promptsData = {
   }
 };
 
+const specPromptsData = {
+  'code-gen': {
+    promptTokens: ['def', ' quicksort', '(arr', '):'],
+    cycles: [
+      {
+        draft: ['if', ' len', '(arr', ') <=', '1', ':'],
+        target: ['if', ' len', '(arr', ') <=', '1', ':'],
+        acceptedMask: [true, true, true, true, true, true],
+        correction: ' return'
+      },
+      {
+        draft: [' arr', '\n', '    pivot', ' =', ' arr', '[0]'],
+        target: [' arr', '\n', '    pivot', ' =', ' arr', '[len(arr)//2]'],
+        acceptedMask: [true, true, true, true, false, false],
+        correction: ' arr'
+      },
+      {
+        draft: ['[', 'len', '(arr', ')', '//', '2', ']'],
+        target: ['[', 'len', '(arr', ')', '//', '2', ']'],
+        acceptedMask: [true, true, true, true, true, true, true],
+        correction: '\n'
+      }
+    ]
+  },
+  'creative-story': {
+    promptTokens: ['Deep', ' in', ' the', ' neon', ' streets,'],
+    cycles: [
+      {
+        draft: [' an', ' autonomous', ' AI', ' agent', ' walked', ' silently'],
+        target: [' an', ' autonomous', ' AI', ' agent', ' vanished', ' quickly'],
+        acceptedMask: [true, true, true, true, false, false],
+        correction: ' vanished'
+      },
+      {
+        draft: [' through', ' the', ' virtual', ' grid', ' looking', ' for'],
+        target: [' into', ' the', ' dark', ' net', ' seeking', ' truth'],
+        acceptedMask: [false, false, false, false, false, false],
+        correction: ' into'
+      },
+      {
+        draft: [' the', ' encrypted', ' keys', ' to', ' the', ' city'],
+        target: [' the', ' encrypted', ' database', ' files', ' of', ' tomorrow'],
+        acceptedMask: [true, true, false, false, false, false],
+        correction: ' database'
+      }
+    ]
+  },
+  'logic-math': {
+    promptTokens: ['Question:', ' Solve', ' 12', ' *', ' 11.', ' Answer:'],
+    cycles: [
+      {
+        draft: [' 12', ' *', ' 10', ' =', ' 120', '.'],
+        target: [' 12', ' *', ' 10', ' =', ' 120', ','],
+        acceptedMask: [true, true, true, true, true, false],
+        correction: ' and'
+      },
+      {
+        draft: [' then', ' add', ' 12', ' to', ' get', ' 132'],
+        target: [' then', ' add', ' 12', ' to', ' get', ' 132'],
+        acceptedMask: [true, true, true, true, true, true],
+        correction: '.'
+      },
+      {
+        draft: [' Therefore', ',', ' 12', ' *', ' 11', ' =', ' 132'],
+        target: [' Therefore', ',', ' 12', ' *', ' 11', ' =', ' 132'],
+        acceptedMask: [true, true, true, true, true, true, true],
+        correction: ' ⚡'
+      }
+    ]
+  }
+};
+
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('grpo-reasoning');
+  const [selectedProjectId, setSelectedProjectId] = useState('speculative-decoding');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
+
+  // Speculative Decoding States
+  const [specPrompt, setSpecPrompt] = useState<string>('code-gen');
+  const [specStatus, setSpecStatus] = useState<'idle' | 'drafting' | 'verifying' | 'completed'>('idle');
+  const [specDraftLength, setSpecDraftLength] = useState<number>(4);
+  const [specAcceptanceProb, setSpecAcceptanceProb] = useState<number>(0.75);
+  const [specDraftModel] = useState<string>('Llama-3-1B');
+  const [specTargetModel] = useState<string>('Llama-3-70B');
+  const [specLogs, setSpecLogs] = useState<string[]>([
+    '[System] Speculative Decoding Engine initialized.',
+    '[System] Ready to run multi-token speculative drafting and parallel verification.'
+  ]);
+  const [specSpeedup, setSpecSpeedup] = useState<number>(1.0);
+  const [specAcceptedCount, setSpecAcceptedCount] = useState<number>(0);
+  const [specRejectedCount, setSpecRejectedCount] = useState<number>(0);
+  const [specStep, setSpecStep] = useState<number>(0);
+  const [specTokens, setSpecTokens] = useState<Array<{
+    token: string;
+    source: 'prompt' | 'draft' | 'target' | 'correction';
+    status: 'accepted' | 'rejected' | 'pending' | 'verified';
+    id: number;
+  }>>([
+    { token: 'def', source: 'prompt', status: 'verified', id: 1 },
+    { token: ' quicksort', source: 'prompt', status: 'verified', id: 2 },
+    { token: '(arr', source: 'prompt', status: 'verified', id: 3 },
+    { token: '):', source: 'prompt', status: 'verified', id: 4 },
+  ]);
+
+  const runSpeculativeSimulation = () => {
+    if (specStatus !== 'idle') return;
+    
+    const pData = specPromptsData[specPrompt as keyof typeof specPromptsData] || specPromptsData['code-gen'];
+    const currentCycleIdx = specStep;
+    
+    if (currentCycleIdx >= pData.cycles.length) {
+      setSpecLogs(prev => [
+        ...prev,
+        `[System] All pre-configured simulation cycles completed. Resetting simulation.`
+      ]);
+      resetSpeculativeSimulation();
+      return;
+    }
+    
+    const cycle = pData.cycles[currentCycleIdx];
+    setSpecStatus('drafting');
+    setSpecLogs(prev => [
+      ...prev,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Starting Cycle ${currentCycleIdx + 1}...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Draft Model (${specDraftModel})] Generating K = ${specDraftLength} speculative draft tokens...`
+    ]);
+    
+    const k = specDraftLength;
+    const actualDraftTokens = cycle.draft.slice(0, k);
+    let currentId = specTokens.length + 1;
+    let tempTokens = [...specTokens];
+    
+    let tokenIndex = 0;
+    const interval = setInterval(() => {
+      if (tokenIndex < actualDraftTokens.length) {
+        const tok = actualDraftTokens[tokenIndex];
+        tempTokens.push({
+          token: tok,
+          source: 'draft',
+          status: 'pending',
+          id: currentId++
+        });
+        setSpecTokens([...tempTokens]);
+        setSpecLogs(prev => [
+          ...prev,
+          `  - Draft token ${tokenIndex + 1}: "${tok}"`
+        ]);
+        tokenIndex++;
+      } else {
+        clearInterval(interval);
+        
+        setSpecStatus('verifying');
+        setSpecLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [System] K-token drafting complete.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [Target Model (${specTargetModel})] Verifying all draft tokens in parallel...`
+        ]);
+        
+        setTimeout(() => {
+          const acceptedMask: boolean[] = [];
+          let allAccepted = true;
+          let firstRejectIndex = -1;
+          
+          for (let i = 0; i < actualDraftTokens.length; i++) {
+            let baseAccept = cycle.acceptedMask[i];
+            const rand = Math.random();
+            const adjustedAccept = rand < specAcceptanceProb ? baseAccept : false;
+            
+            acceptedMask.push(adjustedAccept);
+            if (!adjustedAccept && firstRejectIndex === -1) {
+              firstRejectIndex = i;
+              allAccepted = false;
+            }
+          }
+          
+          const acceptedLimit = allAccepted ? actualDraftTokens.length : firstRejectIndex;
+          const finalTokens = specTokens.filter(t => t.source === 'prompt' || t.status === 'verified');
+          
+          for (let i = 0; i < acceptedLimit; i++) {
+            finalTokens.push({
+              token: actualDraftTokens[i],
+              source: 'draft',
+              status: 'accepted',
+              id: finalTokens.length + 1
+            });
+          }
+          
+          if (!allAccepted) {
+            finalTokens.push({
+              token: actualDraftTokens[acceptedLimit],
+              source: 'draft',
+              status: 'rejected',
+              id: finalTokens.length + 1
+            });
+          }
+          
+          setSpecTokens(finalTokens);
+          
+          const logsToAdd: string[] = [];
+          for (let i = 0; i < actualDraftTokens.length; i++) {
+            if (i < acceptedLimit) {
+              logsToAdd.push(`  - Token ${i+1} ("${actualDraftTokens[i]}"): ACCEPTED (P_target >= P_draft)`);
+            } else if (i === acceptedLimit) {
+              logsToAdd.push(`  - Token ${i+1} ("${actualDraftTokens[i]}"): REJECTED (P_target < P_draft)`);
+              break;
+            }
+          }
+          
+          setSpecLogs(prev => [...prev, ...logsToAdd]);
+          
+          setTimeout(() => {
+            const correctionToken = cycle.correction;
+            const correctedTokensList = finalTokens.map(t => {
+              if (t.status === 'accepted') {
+                return { ...t, status: 'verified' as const };
+              }
+              return t;
+            }).filter(t => t.status !== 'rejected');
+            
+            correctedTokensList.push({
+              token: correctionToken,
+              source: 'correction',
+              status: 'verified',
+              id: correctedTokensList.length + 1
+            });
+            
+            setSpecTokens(correctedTokensList);
+            
+            const M = acceptedLimit;
+            const cycleSpeedup = (M + 1) / (k * 0.05 + 1.0);
+            
+            setSpecSpeedup(prev => {
+              if (prev === 1.0) return cycleSpeedup;
+              return (prev + cycleSpeedup) / 2;
+            });
+            
+            setSpecAcceptedCount(prev => prev + M);
+            setSpecRejectedCount(prev => prev + (allAccepted ? 0 : 1));
+            setSpecStep(prev => prev + 1);
+            setSpecStatus('completed');
+            
+            setSpecLogs(prev => [
+              ...prev,
+              `[${new Date().toTimeString().split(' ')[0]}] [Correction] Appended verified correction token: "${correctionToken}"`,
+              `[${new Date().toTimeString().split(' ')[0]}] [Engine] Cycle ${currentCycleIdx + 1} speedup: ${cycleSpeedup.toFixed(2)}x (Generated ${M + 1} tokens in 1 target pass + ${k} draft passes).`
+            ]);
+            
+          }, 1200);
+          
+        }, 1200);
+      }
+    }, 400);
+  };
+
+  const resetSpeculativeSimulation = () => {
+    setSpecStatus('idle');
+    setSpecStep(0);
+    setSpecSpeedup(1.0);
+    setSpecAcceptedCount(0);
+    setSpecRejectedCount(0);
+    const pData = specPromptsData[specPrompt as keyof typeof specPromptsData] || specPromptsData['code-gen'];
+    
+    const initialTokens = pData.promptTokens.map((tok, idx) => ({
+      token: tok,
+      source: 'prompt' as const,
+      status: 'verified' as const,
+      id: idx + 1
+    }));
+    
+    setSpecTokens(initialTokens);
+    setSpecLogs([
+      '[System] Speculative Decoding Engine initialized.',
+      `[System] Ready to run multi-token speculative drafting (${specDraftModel}) and parallel verification (${specTargetModel}).`
+    ]);
+  };
+
+  useEffect(() => {
+    resetSpeculativeSimulation();
+  }, [specPrompt]);
 
   // GRPO-Reasoning States
   const [grpoPrompt, setGrpoPrompt] = useState<string>('logic-brother');
@@ -4212,7 +4512,440 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'grpo-reasoning' ? (
+            {selectedProjectId === 'speculative-decoding' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', minHeight: '520px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem', overflow: 'hidden' }}>
+                  
+                  {/* Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 2, minWidth: '220px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Speculative Prompt Task
+                      </label>
+                      <select 
+                        value={specPrompt} 
+                        onChange={(e) => setSpecPrompt(e.target.value)}
+                        disabled={specStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(3, 7, 18, 0.5)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <option value="code-gen">Code: Autoregressive QuickSort structure (Highly structured)</option>
+                        <option value="creative-story">Creative: Cyberpunk story agent (Low structure)</option>
+                        <option value="logic-math">Math: Step-by-step verification solver (High structure)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Draft Length (K)
+                      </label>
+                      <select
+                        value={specDraftLength}
+                        onChange={(e) => setSpecDraftLength(parseInt(e.target.value))}
+                        disabled={specStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(3, 7, 18, 0.5)',
+                          border: '1px solid var(--border-color)',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          color: 'white',
+                          outline: 'none',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        <option value={3}>K = 3 tokens</option>
+                        <option value={4}>K = 4 tokens</option>
+                        <option value={5}>K = 5 tokens</option>
+                        <option value={6}>K = 6 tokens</option>
+                      </select>
+                    </div>
+
+                    <div style={{ flex: 1.5, minWidth: '160px' }}>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Draft Alignment ({Math.round(specAcceptanceProb * 100)}%)
+                      </label>
+                      <input 
+                        type="range"
+                        min="0.4"
+                        max="0.95"
+                        step="0.05"
+                        value={specAcceptanceProb}
+                        onChange={(e) => setSpecAcceptanceProb(parseFloat(e.target.value))}
+                        disabled={specStatus !== 'idle'}
+                        style={{
+                          width: '100%',
+                          accentColor: 'var(--primary-color)',
+                          background: 'rgba(3, 7, 18, 0.5)',
+                          height: '6px',
+                          borderRadius: '3px',
+                          outline: 'none',
+                          margin: '0.5rem 0'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        onClick={runSpeculativeSimulation}
+                        disabled={specStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--primary-color), var(--accent-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: specStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: specStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          boxShadow: specStatus === 'idle' ? '0 0 10px rgba(99, 102, 241, 0.3)' : 'none'
+                        }}
+                      >
+                        <Play size={14} /> Run Cycle
+                      </button>
+                      <button 
+                        onClick={resetSpeculativeSimulation}
+                        disabled={specStatus === 'drafting' || specStatus === 'verifying'}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          cursor: (specStatus === 'drafting' || specStatus === 'verifying') ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Simulator Main Display */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem', minHeight: '360px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    
+                    {/* Visual Tokens Panel */}
+                    <div style={{
+                      background: 'rgba(3, 7, 18, 0.4)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      position: 'relative'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Active Token Sequence (Llama-3-70B Context)
+                        </span>
+                        <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.6rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: 'rgba(255,255,255,0.4)' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }}></span> Prompt</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: 'var(--warning-color)' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--warning-color)' }}></span> Draft</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: 'var(--success-color)' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success-color)' }}></span> Accepted</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: 'var(--accent-color)' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-color)' }}></span> Correction</span>
+                        </div>
+                      </div>
+
+                      {/* Display generated text with token styling */}
+                      <div style={{
+                        minHeight: '120px',
+                        background: 'rgba(3, 7, 18, 0.6)',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        border: '1px solid rgba(255, 255, 255, 0.03)',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignContent: 'flex-start',
+                        gap: '0.35rem 0.2rem',
+                        lineHeight: '1.8',
+                        fontFamily: 'Courier New, monospace',
+                        fontSize: '0.9rem'
+                      }}>
+                        {specTokens.map((t) => {
+                          let bg = 'rgba(255,255,255,0.05)';
+                          let border = '1px solid rgba(255,255,255,0.1)';
+                          let color = '#fff';
+                          let glow = 'none';
+                          let isPending = false;
+
+                          if (t.source === 'prompt') {
+                            bg = 'rgba(255,255,255,0.03)';
+                            border = '1px solid rgba(255,255,255,0.05)';
+                            color = 'rgba(255,255,255,0.5)';
+                          } else if (t.status === 'pending') {
+                            bg = 'rgba(245, 158, 11, 0.05)';
+                            border = '1px dashed var(--warning-color)';
+                            color = 'var(--warning-color)';
+                            glow = '0 0 8px rgba(245, 158, 11, 0.2)';
+                            isPending = true;
+                          } else if (t.status === 'accepted') {
+                            bg = 'rgba(34, 197, 94, 0.15)';
+                            border = '1px solid var(--success-color)';
+                            color = 'var(--success-color)';
+                            glow = '0 0 10px rgba(34, 197, 94, 0.3)';
+                          } else if (t.status === 'rejected') {
+                            bg = 'rgba(239, 68, 68, 0.15)';
+                            border = '1px solid var(--error-color)';
+                            color = 'var(--error-color)';
+                            glow = 'none';
+                          } else if (t.source === 'correction') {
+                            bg = 'rgba(139, 92, 246, 0.15)';
+                            border = '1px solid var(--accent-color)';
+                            color = 'var(--accent-color)';
+                            glow = '0 0 10px rgba(139, 92, 246, 0.3)';
+                          }
+
+                          return (
+                            <motion.span
+                              key={t.id}
+                              initial={t.status === 'pending' ? { scale: 0.8, opacity: 0 } : {}}
+                              animate={{ scale: 1, opacity: 1 }}
+                              style={{
+                                display: 'inline-block',
+                                padding: '0.1rem 0.35rem',
+                                borderRadius: '4px',
+                                background: bg,
+                                border: border,
+                                color: color,
+                                boxShadow: glow,
+                                fontWeight: t.source === 'prompt' ? 400 : 700,
+                                whiteSpace: 'pre-wrap',
+                                transition: 'all 0.3s'
+                              }}
+                              className={isPending ? 'blink' : ''}
+                            >
+                              {t.token.replace('\n', '↵\n')}
+                            </motion.span>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Step Visualization Diagram */}
+                    <div style={{
+                      background: 'rgba(3, 7, 18, 0.4)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '12px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem'
+                    }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Parallel Verification Flow
+                      </span>
+                      
+                      {specStatus === 'idle' ? (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem', fontStyle: 'italic' }}>
+                          Start a cycle to visualize drafting and verification operations.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          {/* Draft Row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ width: '80px', fontSize: '0.7rem', color: 'var(--warning-color)', fontWeight: 800 }}>DRAFT (1B):</div>
+                            <div style={{ display: 'flex', gap: '1.5rem', flex: 1 }}>
+                              {specTokens.filter(t => t.source === 'draft').map((t, idx) => (
+                                <div key={idx} style={{ 
+                                  background: 'rgba(245, 158, 11, 0.1)', 
+                                  border: '1px solid rgba(245, 158, 11, 0.3)', 
+                                  borderRadius: '6px', 
+                                  padding: '0.3rem 0.6rem',
+                                  fontSize: '0.7rem',
+                                  fontFamily: 'monospace',
+                                  color: 'white',
+                                  minWidth: '60px',
+                                  textAlign: 'center',
+                                  position: 'relative'
+                                }}>
+                                  <span style={{ position: 'absolute', top: '-12px', left: '0', fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)' }}>K={idx+1}</span>
+                                  {t.token.trim()}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Parallel arrow indicator */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', margin: '-0.3rem 0' }}>
+                            <div style={{ width: '80px' }}></div>
+                            <div style={{ display: 'flex', gap: '1.5rem', flex: 1, paddingLeft: '20px' }}>
+                              {specTokens.filter(t => t.source === 'draft').map((_, idx) => (
+                                <div key={idx} style={{ 
+                                  minWidth: '60px',
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  color: 'var(--text-secondary)'
+                                }}>
+                                  ⬇️
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Target Verification Row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div style={{ width: '80px', fontSize: '0.7rem', color: 'var(--success-color)', fontWeight: 800 }}>TARGET (70B):</div>
+                            <div style={{ display: 'flex', gap: '1.5rem', flex: 1 }}>
+                              {specTokens.filter(t => t.source === 'draft').map((t, idx) => {
+                                let label = 'Verify...';
+                                let bg = 'rgba(255, 255, 255, 0.05)';
+                                let color = 'rgba(255, 255, 255, 0.4)';
+                                let border = '1px solid rgba(255,255,255,0.1)';
+
+                                if (t.status === 'accepted') {
+                                  label = 'Accept ✓';
+                                  bg = 'rgba(34, 197, 94, 0.2)';
+                                  color = 'var(--success-color)';
+                                  border = '1px solid var(--success-color)';
+                                } else if (t.status === 'rejected') {
+                                  label = 'Reject ✗';
+                                  bg = 'rgba(239, 68, 68, 0.2)';
+                                  color = 'var(--error-color)';
+                                  border = '1px solid var(--error-color)';
+                                } else if (t.status === 'verified') {
+                                  label = 'Verified ✓';
+                                  bg = 'rgba(34, 197, 94, 0.2)';
+                                  color = 'var(--success-color)';
+                                  border = '1px solid var(--success-color)';
+                                }
+
+                                return (
+                                  <div key={idx} style={{ 
+                                    background: bg, 
+                                    border: border,
+                                    borderRadius: '6px', 
+                                    padding: '0.3rem 0.6rem',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 700,
+                                    color: color,
+                                    minWidth: '60px',
+                                    textAlign: 'center'
+                                  }}>
+                                    {label}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Correction token showcase */}
+                          {specStatus === 'completed' && (
+                            <div style={{
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '1rem',
+                              borderTop: '1px dashed var(--border-color)',
+                              paddingTop: '0.75rem',
+                              marginTop: '0.25rem'
+                            }}>
+                              <div style={{ width: '80px', fontSize: '0.7rem', color: 'var(--accent-color)', fontWeight: 800 }}>CORRECTION:</div>
+                              <div style={{
+                                background: 'rgba(139, 92, 246, 0.1)',
+                                border: '1px solid var(--accent-color)',
+                                borderRadius: '6px',
+                                padding: '0.4rem 0.75rem',
+                                fontSize: '0.75rem',
+                                fontFamily: 'monospace',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                              }}>
+                                <Zap size={10} color="var(--accent-color)" />
+                                Appended verified target token: <strong>"{specTokens[specTokens.length - 1]?.token}"</strong> (Free correction!)
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logs Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.25rem', background: 'rgba(3, 7, 18, 0.05)' }}>
+                  
+                  {/* Telemetry */}
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Speculative Telemetry
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Speedup Factor</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--success-color)', fontFamily: 'monospace' }}>
+                          {specSpeedup.toFixed(2)}x
+                        </span>
+                      </div>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Acceptance Rate</span>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-color)', fontFamily: 'monospace' }}>
+                          {specAcceptedCount + specRejectedCount > 0 
+                            ? `${Math.round((specAcceptedCount / (specAcceptedCount + specRejectedCount)) * 100)}%`
+                            : 'N/A'
+                          }
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>VRAM Savings</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--warning-color)', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                          {specSpeedup > 1.0 
+                            ? `${Math.round((1 - 1/specSpeedup) * 100)}% Bandwidth`
+                            : '0% (Standard)'
+                          }
+                        </span>
+                      </div>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Active Cycle</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', fontFamily: 'monospace', marginTop: '0.2rem' }}>
+                          Cycle {specStep} / 3
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* System Console */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '180px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Speculative execution Console
+                    </h4>
+                    <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.5)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto', maxHeight: '220px' }}>
+                      {specLogs.map((log, idx) => (
+                        <div key={idx} style={{ 
+                          color: log.includes('[System]') ? 'var(--text-secondary)' : 
+                                 log.includes('[Draft Model') || log.includes('Draft token') ? 'var(--warning-color)' :
+                                 log.includes('[Target Model') ? 'var(--success-color)' :
+                                 log.includes('[Verification]') ? 'rgba(255,255,255,0.7)' :
+                                 log.includes('[Correction]') ? 'var(--accent-color)' : 'var(--text-primary)',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ) : selectedProjectId === 'grpo-reasoning' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', minHeight: '520px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem', overflow: 'hidden' }}>
