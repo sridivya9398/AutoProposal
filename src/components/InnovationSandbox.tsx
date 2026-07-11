@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Cpu, Wifi, WifiOff, Play, Terminal, Code, Sparkles, ShieldCheck, Database, Layers, Check, Crown, AlertTriangle, Coins, Zap } from 'lucide-react';
+import { Cpu, Wifi, WifiOff, Play, Terminal, Code, Sparkles, ShieldCheck, Database, Layers, Check, Crown, AlertTriangle, Coins, Zap, Brain, Eye, Compass, TrendingDown, Activity, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TechProject {
@@ -16,6 +16,28 @@ interface TechProject {
 }
 
 const PROJECTS: TechProject[] = [
+  {
+    id: 'active-inference',
+    date: 'July 11, 2026',
+    title: 'Active Inference FEP Agent',
+    tagline: 'Variational Free Energy Principle (FEP) agent simulator mapping epistemic exploration and pragmatic exploitation under sensory noise',
+    impactScore: 9.9,
+    techStack: ['Active Inference', 'Free Energy Principle', 'Variational Free Energy', 'Expected Free Energy', 'Epistemic Exploration', 'Pragmatic Value', 'Generative Belief Model'],
+    problemSolved: 'Standard Reinforcement Learning (RL) agents require extensive trial-and-error exploration and fail when sensory inputs are noisy or when goal conditions shift dynamically. They lack a unified mathematical framework to balance epistemic information gain with pragmatic goal execution.',
+    impactDescription: 'Implements an active inference agent navigating a grid with obstacles, a goal state, and a sensory beacon. By formulating actions to minimize Expected Free Energy (G), the agent balances exploration (epistemic value) and goal-seeking (pragmatic value). Higher sensory noise causes the agent to rely more on prior beliefs, while lower noise allows fast epistemic updates, demonstrating noise-resilient biological action-perception loops.',
+    architecture: [
+      'Generative Model ──> Defines state space (grid coordinates), actions (Up/Down/Left/Right), and observations (noisy sensor readings)',
+      'Variational Perception ──> Minimizes Variational Free Energy (F) to update internal belief distributions Q(s) under sensor noise',
+      'Expected Free Energy (G) ──> Evaluates future paths by combining epistemic value (uncertainty reduction) and pragmatic value (goal preferences)',
+      'Active Sensing ──> Navigates to high-information cues (e.g. clue beacons) to resolve layout uncertainty before exploiting the target'
+    ],
+    metrics: {
+      'Variational Free Energy (F)': 'Minimizing active surprise',
+      'Expected Free Energy (G)': 'Unified exploration/exploitation metric',
+      'Epistemic Gain': 'Information value of sensory scanning',
+      'Goal Prior Preference': 'Attractor state at Goal (0,4)'
+    }
+  },
   {
     id: 'speculative-decoding',
     date: 'July 08, 2026 (Today)',
@@ -701,7 +723,7 @@ const specPromptsData = {
 };
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('speculative-decoding');
+  const [selectedProjectId, setSelectedProjectId] = useState('active-inference');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
   // Speculative Decoding States
@@ -1562,6 +1584,250 @@ We will leverage decentralized technologies to scale our application without add
   const [inferenceSpeed, setInferenceSpeed] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimer = useRef<any>(null);
+
+  // Active Inference (Free Energy Principle) States
+  const [fepSensoryNoise, setFepSensoryNoise] = useState<number>(0.2); // 0.0 to 1.0
+  const [fepPriorPrecision, setFepPriorPrecision] = useState<number>(2.0); // 0.5 to 5.0
+  const [fepAgentPos, setFepAgentPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [fepTrueGrid] = useState<number[][]>([
+    [0, 0, 1, 0, 3], // row 0: start at (0,0), hazard at (0,2), goal at (0,4)
+    [0, 1, 0, 0, 0], // row 1: hazard at (1,1)
+    [0, 1, 1, 1, 0], // row 2: hazards at (2,1), (2,2), (2,3)
+    [0, 0, 0, 0, 0], // row 3: clear path around hazards
+    [2, 0, 0, 0, 0]  // row 4: clue beacon at (4,0)
+  ]);
+  const [fepBeliefGrid, setFepBeliefGrid] = useState<number[][]>([
+    [0, 0.3, 0.3, 0.3, 0.3],
+    [0.3, 0.3, 0.3, 0.3, 0.3],
+    [0.3, 0.3, 0.3, 0.3, 0.3],
+    [0.3, 0.3, 0.3, 0.3, 0.3],
+    [0.3, 0.3, 0.3, 0.3, 0.3]
+  ]); // hazard beliefs, initially 0.3 representing high uncertainty
+  const [fepStatus, setFepStatus] = useState<'idle' | 'running' | 'paused' | 'completed'>('idle');
+  const [fepStep, setFepStep] = useState<number>(0);
+  const [fepPath, setFepPath] = useState<{ x: number; y: number }[]>([{ x: 0, y: 0 }]);
+  const [fepLogs, setFepLogs] = useState<string[]>([
+    '[System] Active Inference (Free Energy Principle) engine initialized.',
+    '[System] Ready to run variational free energy minimization loop.'
+  ]);
+  const [fepMetrics, setFepMetrics] = useState({
+    freeEnergy: 0.85,
+    expectedFreeEnergy: 1.45,
+    epistemicValue: 0.95,
+    pragmaticValue: 0.50,
+    clueScanned: false
+  });
+  const fepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stepFepSimulation = () => {
+    const cx = fepAgentPos.x;
+    const cy = fepAgentPos.y;
+    
+    if (cx === 0 && cy === 4) {
+      setFepStatus('completed');
+      setFepLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [Goal] Target state (0,4) successfully reached! Minimizing free energy complete. 🎉`
+      ]);
+      return;
+    }
+    
+    const moves = [
+      { name: 'Up', dx: -1, dy: 0 },
+      { name: 'Down', dx: 1, dy: 0 },
+      { name: 'Left', dx: 0, dy: -1 },
+      { name: 'Right', dx: 0, dy: 1 }
+    ];
+    
+    let bestMove: any = null;
+    let maxScore = -Infinity;
+    let evaluatedMoves: any[] = [];
+    
+    moves.forEach(m => {
+      const nx = cx + m.dx;
+      const ny = cy + m.dy;
+      
+      if (nx >= 0 && nx < 5 && ny >= 0 && ny < 5) {
+        const distToGoal = Math.abs(nx - 0) + Math.abs(ny - 4);
+        const beliefHazard = fepBeliefGrid[nx][ny];
+        
+        // Pragmatic value: prefer goal, heavily penalize believed hazards
+        const pragmatic = -distToGoal * fepPriorPrecision - beliefHazard * 18.0;
+        
+        // Epistemic value: uncertainty reduction
+        let epistemic = 0;
+        if (nx === 4 && ny === 0 && !fepMetrics.clueScanned) {
+          epistemic = 25.0 * (1 - fepSensoryNoise);
+        } else {
+          const visited = fepPath.some(p => p.x === nx && p.y === ny);
+          if (!visited) {
+            epistemic = 2.0 * (1 - fepSensoryNoise);
+          }
+        }
+        
+        const score = pragmatic + epistemic + Math.random() * 0.1;
+        
+        evaluatedMoves.push({
+          name: m.name,
+          x: nx,
+          y: ny,
+          pragmatic,
+          epistemic,
+          score
+        });
+        
+        if (score > maxScore) {
+          maxScore = score;
+          bestMove = { name: m.name, x: nx, y: ny, pragmatic, epistemic, score };
+        }
+      }
+    });
+    
+    if (!bestMove) return;
+    
+    const nx = bestMove.x;
+    const ny = bestMove.y;
+    
+    const newPath = [...fepPath, { x: nx, y: ny }];
+    setFepPath(newPath);
+    setFepAgentPos({ x: nx, y: ny });
+    setFepStep(prev => prev + 1);
+    
+    const isHazard = fepTrueGrid[nx][ny] === 1;
+    let hitObstacle = false;
+    let logsToAdd: string[] = [];
+    
+    logsToAdd.push(
+      `[${new Date().toTimeString().split(' ')[0]}] [Policy] Decided action: ${bestMove.name} to (${nx},${ny}) | G_score = ${(-bestMove.score).toFixed(2)} (Pragmatic G_p: ${(-bestMove.pragmatic).toFixed(2)}, Epistemic G_e: ${(-bestMove.epistemic).toFixed(2)})`
+    );
+    
+    const newBeliefs = fepBeliefGrid.map(row => [...row]);
+    
+    if (isHazard) {
+      hitObstacle = true;
+      logsToAdd.push(`[${new Date().toTimeString().split(' ')[0]}] [Surprise!] Hit hidden hazard at (${nx},${ny})! Sensory shock registered.`);
+      newBeliefs[nx][ny] = Math.min(1.0, 1.0 - fepSensoryNoise * 0.2);
+    } else {
+      newBeliefs[nx][ny] = Math.max(0.0, fepSensoryNoise * 0.15);
+    }
+    
+    // Local sensing of neighboring cells
+    moves.forEach(m => {
+      const sx = nx + m.dx;
+      const sy = ny + m.dy;
+      if (sx >= 0 && sx < 5 && sy >= 0 && sy < 5) {
+        const trueNeighborVal = fepTrueGrid[sx][sy];
+        const currentBelief = newBeliefs[sx][sy];
+        const updateRate = 0.5 * (1 - fepSensoryNoise);
+        if (trueNeighborVal === 1) {
+          newBeliefs[sx][sy] = currentBelief + (0.85 - currentBelief) * updateRate;
+        } else {
+          newBeliefs[sx][sy] = currentBelief - (currentBelief - 0.05) * updateRate;
+        }
+      }
+    });
+    
+    let scannedClue = fepMetrics.clueScanned;
+    
+    if (nx === 4 && ny === 0 && !scannedClue) {
+      scannedClue = true;
+      logsToAdd.push(`[${new Date().toTimeString().split(' ')[0]}] [Perception] Reached Clue Beacon! Map scanned. Updated beliefs with high-fidelity sensory telemetry.`);
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          if (fepTrueGrid[r][c] === 1) {
+            newBeliefs[r][c] = Math.min(1.0, 1.0 - fepSensoryNoise * 0.2);
+          } else {
+            newBeliefs[r][c] = Math.max(0.0, fepSensoryNoise * 0.1);
+          }
+        }
+      }
+    }
+    
+    setFepBeliefGrid(newBeliefs);
+    
+    let totalEntropy = 0;
+    let predictionError = 0;
+    let cellCount = 0;
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const b = Math.max(0.001, Math.min(0.999, newBeliefs[r][c]));
+        const ent = -(b * Math.log(b) + (1 - b) * Math.log(1 - b));
+        totalEntropy += ent;
+        
+        const trueState = fepTrueGrid[r][c] === 1 ? 1.0 : 0.0;
+        predictionError += Math.pow(trueState - b, 2);
+        cellCount++;
+      }
+    }
+    
+    const avgEntropy = totalEntropy / cellCount;
+    const fVal = avgEntropy * 0.35 + predictionError * 0.65 + (hitObstacle ? 1.5 : 0.0);
+    
+    setFepMetrics({
+      freeEnergy: fVal,
+      expectedFreeEnergy: -bestMove.score,
+      epistemicValue: bestMove.epistemic,
+      pragmaticValue: -bestMove.pragmatic,
+      clueScanned: scannedClue
+    });
+    
+    setFepLogs(prev => [...prev, ...logsToAdd]);
+  };
+
+  const runFepSimulation = () => {
+    if (fepStatus === 'running') return;
+    setFepStatus('running');
+    setFepLogs(prev => [
+      ...prev,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Started Variational Free Energy minimization loop.`
+    ]);
+  };
+
+  const pauseFepSimulation = () => {
+    setFepStatus('paused');
+    setFepLogs(prev => [
+      ...prev,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Simulation loop paused.`
+    ]);
+  };
+
+  const resetFepSimulation = () => {
+    setFepStatus('idle');
+    setFepStep(0);
+    setFepAgentPos({ x: 0, y: 0 });
+    setFepPath([{ x: 0, y: 0 }]);
+    setFepBeliefGrid([
+      [0, 0.3, 0.3, 0.3, 0.3],
+      [0.3, 0.3, 0.3, 0.3, 0.3],
+      [0.3, 0.3, 0.3, 0.3, 0.3],
+      [0.3, 0.3, 0.3, 0.3, 0.3],
+      [0.3, 0.3, 0.3, 0.3, 0.3]
+    ]);
+    setFepMetrics({
+      freeEnergy: 0.85,
+      expectedFreeEnergy: 1.45,
+      epistemicValue: 0.95,
+      pragmaticValue: 0.50,
+      clueScanned: false
+    });
+    setFepLogs([
+      '[System] Active Inference (Free Energy Principle) engine initialized.',
+      '[System] Ready to run variational free energy minimization loop.'
+    ]);
+  };
+
+  useEffect(() => {
+    if (fepStatus === 'running') {
+      const interval = setInterval(() => {
+        stepFepSimulation();
+      }, 700);
+      fepIntervalRef.current = interval;
+      return () => {
+        clearInterval(interval);
+        fepIntervalRef.current = null;
+      };
+    }
+  }, [fepStatus, fepAgentPos, fepBeliefGrid, fepPath, fepSensoryNoise, fepPriorPrecision, fepMetrics.clueScanned]);
 
   // SAE Feature Steering States
   const [saePrompt, setSaePrompt] = useState('Explain how a nuclear reactor works.');
@@ -4512,7 +4778,358 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'speculative-decoding' ? (
+            {selectedProjectId === 'active-inference' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', minHeight: '520px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Parameter Controls */}
+                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-end', flexWrap: 'wrap', background: 'rgba(255, 255, 255, 0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Sensory Noise (\sigma)
+                        </label>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--accent-color)', fontWeight: 700, fontFamily: 'monospace' }}>
+                          {(fepSensoryNoise * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min={0}
+                        max={1.0}
+                        step={0.05}
+                        value={fepSensoryNoise}
+                        onChange={(e) => setFepSensoryNoise(parseFloat(e.target.value))}
+                        disabled={fepStatus === 'running'}
+                        style={{
+                          width: '100%',
+                          accentColor: 'var(--accent-color)',
+                          cursor: fepStatus === 'running' ? 'not-allowed' : 'pointer'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Prior Goal Precision (\lambda)
+                        </label>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: 700, fontFamily: 'monospace' }}>
+                          {fepPriorPrecision.toFixed(1)}
+                        </span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min={0.5}
+                        max={5.0}
+                        step={0.1}
+                        value={fepPriorPrecision}
+                        onChange={(e) => setFepPriorPrecision(parseFloat(e.target.value))}
+                        disabled={fepStatus === 'running'}
+                        style={{
+                          width: '100%',
+                          accentColor: 'var(--primary-color)',
+                          cursor: fepStatus === 'running' ? 'not-allowed' : 'pointer'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {fepStatus === 'running' ? (
+                        <button 
+                          onClick={pauseFepSimulation}
+                          className="btn"
+                          style={{
+                            background: 'rgba(245, 158, 11, 0.15)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            color: 'var(--warning-color)',
+                            padding: '0.6rem 1rem',
+                            borderRadius: '8px',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Pause size={14} /> Pause
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={runFepSimulation}
+                          disabled={fepStatus === 'completed'}
+                          className="btn btn-primary"
+                          style={{
+                            padding: '0.6rem 1.2rem',
+                            borderRadius: '8px',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            cursor: fepStatus === 'completed' ? 'not-allowed' : 'pointer',
+                            opacity: fepStatus === 'completed' ? 0.6 : 1
+                          }}
+                        >
+                          <Play size={14} /> Start FEP
+                        </button>
+                      )}
+                      <button 
+                        onClick={resetFepSimulation}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: '0.6rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Environment & Belief Grid Layout */}
+                  <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    
+                    {/* True Environment Grid */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Actual Environment State
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateRows: 'repeat(5, 52px)', gridTemplateColumns: 'repeat(5, 52px)', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '6px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        {fepTrueGrid.map((row, rIdx) => 
+                          row.map((cell, cIdx) => {
+                            const isAgent = fepAgentPos.x === rIdx && fepAgentPos.y === cIdx;
+                            const isPath = fepPath.some(p => p.x === rIdx && p.y === cIdx);
+                            
+                            let bgColor = 'rgba(255, 255, 255, 0.02)';
+                            let border = '1px solid rgba(255,255,255,0.04)';
+                            let cellContent = null;
+                            
+                            if (cell === 1) { // Hazard
+                              bgColor = 'rgba(239, 68, 68, 0.08)';
+                              border = '1px solid rgba(239, 68, 68, 0.2)';
+                              cellContent = <AlertTriangle size={15} color="var(--error-color)" />;
+                            } else if (cell === 2) { // Clue Beacon
+                              bgColor = fepMetrics.clueScanned ? 'rgba(59, 130, 246, 0.04)' : 'rgba(168, 85, 247, 0.15)';
+                              border = `1px solid ${fepMetrics.clueScanned ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.35)'}`;
+                              cellContent = <Eye size={15} color={fepMetrics.clueScanned ? 'var(--text-secondary)' : '#c084fc'} className={fepMetrics.clueScanned ? '' : 'animate-pulse'} />;
+                            } else if (cell === 3) { // Goal
+                              bgColor = 'rgba(16, 185, 129, 0.08)';
+                              border = '1px solid rgba(16, 185, 129, 0.25)';
+                              cellContent = <Crown size={15} color="var(--success-color)" />;
+                            } else if (isPath) {
+                              bgColor = 'rgba(59, 130, 246, 0.04)';
+                            }
+                            
+                            return (
+                              <div 
+                                key={`${rIdx}-${cIdx}`}
+                                style={{
+                                  position: 'relative',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: bgColor,
+                                  border: border,
+                                  borderRadius: '8px',
+                                  transition: 'all 0.3s ease'
+                                }}
+                              >
+                                {cellContent}
+                                {isAgent && (
+                                  <motion.div 
+                                    layoutId="true-agent"
+                                    style={{
+                                      position: 'absolute',
+                                      width: '26px',
+                                      height: '26px',
+                                      borderRadius: '50%',
+                                      background: 'radial-gradient(circle, #f59e0b 0%, rgba(245,158,11,0.2) 100%)',
+                                      border: '2px solid #fbbf24',
+                                      boxShadow: '0 0 10px #fbbf24',
+                                      zIndex: 10
+                                    }}
+                                  />
+                                )}
+                                <span style={{ position: 'absolute', bottom: '2px', right: '3px', fontSize: '0.55rem', color: 'rgba(255,255,255,0.12)', fontFamily: 'monospace' }}>
+                                  {rIdx},{cIdx}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Belief Grid Map */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Agent Generative Belief Map Q(s)
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateRows: 'repeat(5, 52px)', gridTemplateColumns: 'repeat(5, 52px)', gap: '4px', background: 'rgba(3,7,18,0.4)', padding: '6px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        {fepBeliefGrid.map((row, rIdx) => 
+                          row.map((val, cIdx) => {
+                            const isAgent = fepAgentPos.x === rIdx && fepAgentPos.y === cIdx;
+                            const trueVal = fepTrueGrid[rIdx][cIdx];
+                            
+                            // Blend colors dynamically based on belief probability
+                            // Safe (0.0) -> dark blue slate
+                            // High uncertainty (0.3) -> dark amber/orange
+                            // Hazard (1.0) -> bright red/crimson
+                            let cellColor = 'rgb(10, 15, 30)';
+                            if (val > 0.05 && val <= 0.35) {
+                              const ratio = (val - 0.05) / 0.3;
+                              cellColor = `rgb(${Math.round(15 + ratio * 85)}, ${Math.round(23 + ratio * 45)}, ${Math.round(42 - ratio * 15)})`;
+                            } else if (val > 0.35) {
+                              const ratio = Math.min(1.0, (val - 0.35) / 0.65);
+                              cellColor = `rgb(${Math.round(100 + ratio * 120)}, ${Math.round(68 - ratio * 45)}, ${Math.round(27 - ratio * 15)})`;
+                            }
+                            
+                            let cellContent = null;
+                            if (trueVal === 3) {
+                              cellContent = <Crown size={12} color="rgba(16, 185, 129, 0.35)" />;
+                            } else if (trueVal === 2) {
+                              cellContent = <Eye size={12} color="rgba(168, 85, 247, 0.35)" />;
+                            }
+                            
+                            return (
+                              <div 
+                                key={`belief-${rIdx}-${cIdx}`}
+                                style={{
+                                  position: 'relative',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: cellColor,
+                                  border: '1px solid rgba(255,255,255,0.05)',
+                                  borderRadius: '8px',
+                                  transition: 'background-color 0.4s ease'
+                                }}
+                              >
+                                {cellContent}
+                                {isAgent && (
+                                  <motion.div 
+                                    layoutId="belief-agent"
+                                    style={{
+                                      position: 'absolute',
+                                      width: '26px',
+                                      height: '26px',
+                                      borderRadius: '50%',
+                                      background: 'radial-gradient(circle, #a855f7 0%, rgba(168,85,247,0.2) 100%)',
+                                      border: '2px solid #c084fc',
+                                      boxShadow: '0 0 10px #c084fc',
+                                      zIndex: 10
+                                    }}
+                                  />
+                                )}
+                                <span style={{ fontSize: '0.65rem', fontWeight: 800, color: val > 0.45 ? 'white' : 'rgba(255,255,255,0.5)', fontFamily: 'monospace', zIndex: 2 }}>
+                                  {val.toFixed(2)}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Free Energy Telemetry Dashboard */}
+                  <div>
+                    <h4 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Free Energy Principle Mathematical Metrics
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <TrendingDown size={11} color="var(--success-color)" /> Variational F
+                        </span>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: fepMetrics.freeEnergy > 1.2 ? 'var(--error-color)' : 'var(--success-color)', margin: '0.15rem 0' }}>
+                          {fepMetrics.freeEnergy.toFixed(4)}
+                        </span>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary)' }}>Current Surprise</span>
+                      </div>
+
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Activity size={11} color="var(--accent-color)" /> Expected G
+                        </span>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--accent-color)', margin: '0.15rem 0' }}>
+                          {fepMetrics.expectedFreeEnergy.toFixed(2)}
+                        </span>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary)' }}>Path value to minimize</span>
+                      </div>
+
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Brain size={11} color="#a78bfa" /> Epistemic Value
+                        </span>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#a78bfa', margin: '0.15rem 0' }}>
+                          {fepMetrics.epistemicValue.toFixed(2)}
+                        </span>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary)' }}>Active Sensing gain</span>
+                      </div>
+
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Compass size={11} color="var(--primary-color)" /> Pragmatic Value
+                        </span>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary-color)', margin: '0.15rem 0' }}>
+                          {(-fepMetrics.pragmaticValue).toFixed(2)}
+                        </span>
+                        <span style={{ fontSize: '0.55rem', color: 'var(--text-secondary)' }}>Goal preference attractor</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Logs Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.25rem', background: 'rgba(3, 7, 18, 0.05)' }}>
+                  
+                  {/* Performance Indicators */}
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Perception Engine States
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Beacon Scanned</span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: fepMetrics.clueScanned ? 'var(--success-color)' : 'var(--warning-color)' }}>
+                          {fepMetrics.clueScanned ? 'Completed (100%)' : 'Pending (0%)'}
+                        </span>
+                      </div>
+                      <div style={{ background: 'rgba(3, 7, 18, 0.3)', padding: '0.6rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Simulation Step</span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-color)', fontFamily: 'monospace' }}>
+                          Step #{fepStep}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* System Console */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '180px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Active Inference logs
+                    </h4>
+                    <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.5)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto', maxHeight: '220px' }}>
+                      {fepLogs.map((log, idx) => (
+                        <div key={idx} style={{ 
+                          color: log.includes('[Surprise!]') ? 'var(--error-color)' : 
+                                 log.includes('[Perception]') ? '#c084fc' :
+                                 log.includes('[Policy]') ? 'var(--primary-color)' :
+                                 log.includes('[Goal]') || log.includes(' minimization') ? 'var(--success-color)' : 'var(--text-secondary)',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ) : selectedProjectId === 'speculative-decoding' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', minHeight: '520px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem', overflow: 'hidden' }}>
