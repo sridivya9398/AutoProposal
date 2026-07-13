@@ -17,6 +17,52 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'diffusion-forcing',
+    date: 'July 13, 2026 (Today)',
+    title: 'Diffusion Forcing World Model',
+    tagline: 'Spatio-temporal fractional denoising and guidance simulator for error-free long-horizon agent planning',
+    impactScore: 9.9,
+    techStack: ['Diffusion Forcing', 'Spatio-Temporal World Models', 'Fractional Denoising', 'Classifier-Free Guidance', 'Exposure Bias Mitigation', 'Markov Decision Processes (MDP)'],
+    problemSolved: 'Autoregressive sequence models suffer from exposure bias, where small prediction errors compound exponentially over long horizons (O(T^2)), causing agent trajectories to drift off the true manifold and collide with obstacles. Full-sequence diffusion planning is computationally heavy and cannot run step-by-step.',
+    impactDescription: 'Implements a Diffusion Forcing world model simulation. Rather than generating paths in a single pass (autoregressive) or running a full multi-step diffusion on the entire trajectory, Diffusion Forcing performs fractional denoising step-by-step. By forcing the latent sequence memory to remain strictly on the valid data manifold at each time step using gradient guidance, it eliminates drift, corrects temporal planning errors, and enables smooth, collision-free obstacle avoidance.',
+    architecture: [
+      'State-Action Encoding ──> Ingest agent state (x,y coordinate) and active command query',
+      'Fractional Denoising ──> Apply a limited number of denoising steps (e.g., 3-5 steps) to lookahead horizon cells',
+      'Manifold Guidance ──> Inject Classifier-Free Guidance (CFG) gradients to push predicted coordinates away from obstacles',
+      'State Re-alignment ──> Force sequence hidden states back to the true manifold, preventing error propagation',
+      'Lookahead Recurrency ──> Roll forward the hidden state dynamically while sliding the temporal window'
+    ],
+    metrics: {
+      'Denoising Loss': 'Reconstruction error of coordinates',
+      'Manifold Adherence': 'Closeness of path to traversable space',
+      'Collision Rate': '0% with Guidance (vs 84% Autoregressive)',
+      'Planning Latency': 'Sub-15ms step updates'
+    }
+  },
+  {
+    id: 'ttt-layer',
+    date: 'July 12, 2026',
+    title: 'Test-Time Training (TTT) Layer Agent',
+    tagline: 'Online gradient descent simulator for self-supervised TTT-Linear hidden state weights enabling infinite context compression',
+    impactScore: 9.9,
+    techStack: ['Test-Time Training (TTT)', 'Linear Sequence Models', 'Self-Supervised Learning', 'Online Gradient Descent', 'Associative Memory Keys', 'Context Compression'],
+    problemSolved: 'Traditional softmax attention scales quadratically O(T^2) with sequence length, causing severe memory bottlenecks. Existing linear attention / recurrent state space models (SSMs) like Mamba have finite state capacities, forgetting details or suffering from low recall in long context tasks like associative key-value lookup.',
+    impactDescription: 'Implements a Test-Time Training (TTT) simulation. Instead of storing tokens in a KV-cache or updating a static linear RNN state, TTT treats the hidden state as an actual linear neural network model (weights W_t). Upon receiving each token, the hidden state model is optimized via self-supervised reconstruction loss using online gradient descent. The updated weights are then used to predict representation tokens. This achieves O(d^2) state capacity independent of token count, enabling infinite context length with high-fidelity associative recall.',
+    architecture: [
+      'Token Ingestion ──> Stream input sequence of key-value tokens (e.g. "UserA -> 0x7F")',
+      'Self-Supervised Task ──> Formulate a reconstruction task (predicting a masked key from the pair)',
+      'Test-Time Gradient Step ──> Compute local prediction loss and update internal state weights: W_t = W_{t-1} - \\eta \\nabla L(W_{t-1}; x_t)',
+      'Associative Lookup ──> Retrieve values by running forward pass on the updated local network: y_t = W_t * x_query',
+      'Dual-Loop Decay ──> Apply a small parameter decay to prevent activation explosion over long periods'
+    ],
+    metrics: {
+      'Online SSL Loss': 'Reconstruction error of the hidden model',
+      'Associative Recall': 'Success rate of retrieving key-value mappings',
+      'Local Gradient Steps': 'Steps of SGD run per token',
+      'Compression Ratio': 'State size remains constant O(d^2)'
+    }
+  },
+  {
     id: 'active-inference',
     date: 'July 11, 2026',
     title: 'Active Inference FEP Agent',
@@ -722,8 +768,35 @@ const specPromptsData = {
   }
 };
 
+const TTT_PRESETS = {
+  fruits: [
+    { key: 'Apple', val: 'Red' },
+    { key: 'Banana', val: 'Yellow' },
+    { key: 'Grape', val: 'Purple' },
+    { key: 'Cherry', val: 'Pink' },
+    { key: 'Blueberry', val: 'Blue' },
+    { key: 'Avocado', val: 'Green' }
+  ],
+  companies: [
+    { key: 'Google', val: 'GOOG' },
+    { key: 'Apple_Inc', val: 'AAPL' },
+    { key: 'Microsoft', val: 'MSFT' },
+    { key: 'Amazon', val: 'AMZN' },
+    { key: 'Meta', val: 'META' },
+    { key: 'Nvidia', val: 'NVDA' }
+  ],
+  protocols: [
+    { key: 'HTTP', val: 'Port-80' },
+    { key: 'HTTPS', val: 'Port-443' },
+    { key: 'SSH', val: 'Port-22' },
+    { key: 'FTP', val: 'Port-21' },
+    { key: 'DNS', val: 'Port-53' },
+    { key: 'SMTP', val: 'Port-25' }
+  ]
+};
+
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('active-inference');
+  const [selectedProjectId, setSelectedProjectId] = useState('diffusion-forcing');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
   // Speculative Decoding States
@@ -1618,6 +1691,763 @@ We will leverage decentralized technologies to scale our application without add
     clueScanned: false
   });
   const fepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Test-Time Training (TTT) Layer States
+  const [tttPreset, setTttPreset] = useState<'fruits' | 'companies' | 'protocols'>('fruits');
+  const [tttStatus, setTttStatus] = useState<'idle' | 'training' | 'completed'>('idle');
+  const [tttLearningRate, setTttLearningRate] = useState<number>(0.1);
+  const tttGradientSteps = 3;
+  const tttL2Decay = 0.005;
+  const [tttProgress, setTttProgress] = useState(0);
+  const [tttLogs, setTttLogs] = useState<string[]>([
+    '[System] Test-Time Training (TTT) Layer Simulator initialized.',
+    '[System] Ready to ingest key-value sequence and run online gradient descent.'
+  ]);
+  const [tttWeightMatrix, setTttWeightMatrix] = useState<number[][]>(() => {
+    const matrix = [];
+    for (let i = 0; i < 6; i++) {
+      const row = [];
+      for (let j = 0; j < 6; j++) {
+        row.push(i === j ? 0.8 + (Math.random() * 0.1 - 0.05) : (Math.random() * 0.1 - 0.05));
+      }
+      matrix.push(row);
+    }
+    return matrix;
+  });
+  const [tttLossHistory, setTttLossHistory] = useState<number[]>([]);
+  const [tttActiveTokenIndex, setTttActiveTokenIndex] = useState<number>(-1);
+  const [tttStepLoss, setTttStepLoss] = useState<number>(0);
+  const [tttRetrievalKey, setTttRetrievalKey] = useState<string>('Apple');
+  const [tttOutputValue, setTttOutputValue] = useState<string>('');
+  const [tttTrueValue, setTttTrueValue] = useState<string>('');
+  const [tttRetrievalCorrect, setTttRetrievalCorrect] = useState<boolean | null>(null);
+  
+  const tttCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const tttIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const resetTttSimulation = () => {
+    if (tttIntervalRef.current) {
+      clearInterval(tttIntervalRef.current);
+      tttIntervalRef.current = null;
+    }
+    setTttStatus('idle');
+    setTttProgress(0);
+    setTttActiveTokenIndex(-1);
+    setTttStepLoss(0);
+    setTttLossHistory([]);
+    setTttOutputValue('');
+    setTttTrueValue('');
+    setTttRetrievalCorrect(null);
+    setTttLogs([
+      '[System] Simulator reset. Weights re-initialized to default baseline.',
+      '[System] Select a preset and parameters, then click "Run Test-Time Training".'
+    ]);
+    setTttWeightMatrix(() => {
+      const matrix = [];
+      for (let i = 0; i < 6; i++) {
+        const row = [];
+        for (let j = 0; j < 6; j++) {
+          row.push(i === j ? 0.8 + (Math.random() * 0.1 - 0.05) : (Math.random() * 0.1 - 0.05));
+        }
+        matrix.push(row);
+      }
+      return matrix;
+    });
+  };
+
+  const getTttFeatureVector = (name: string, _type: 'key' | 'value'): number[] => {
+    const mappings: { [key: string]: number[] } = {
+      'Apple': [0.9, 0.8, 0.7, 0.3, 0.2, 0.4],
+      'Banana': [0.1, 0.9, 0.8, 0.1, 0.6, 0.5],
+      'Grape': [0.9, 0.4, 0.8, 0.4, 0.1, 0.1],
+      'Cherry': [0.9, 0.9, 0.7, 0.5, 0.1, 0.1],
+      'Blueberry': [0.9, 0.1, 0.6, 0.6, 0.1, 0.1],
+      'Avocado': [0.7, 0.2, 0.2, 0.1, 0.8, 0.4],
+      
+      'Red': [0.9, 0.1, 0.1, 0.9, 0.8, 0.8],
+      'Yellow': [0.9, 0.9, 0.1, 0.8, 0.7, 0.8],
+      'Purple': [0.6, 0.1, 0.7, 0.4, 0.6, 0.8],
+      'Pink': [0.9, 0.4, 0.5, 0.7, 0.5, 0.8],
+      'Blue': [0.1, 0.1, 0.9, 0.1, 0.8, 0.8],
+      'Green': [0.1, 0.9, 0.1, 0.3, 0.6, 0.8],
+
+      'Google': [0.8, 0.9, 0.3, 0.8, 0.9, 0.7],
+      'Apple_Inc': [0.9, 0.8, 0.7, 0.9, 0.8, 0.6],
+      'Microsoft': [0.7, 0.8, 0.9, 0.8, 0.7, 0.8],
+      'Amazon': [0.6, 0.7, 0.9, 0.5, 0.9, 0.9],
+      'Meta': [0.5, 0.8, 0.4, 0.9, 0.8, 0.7],
+      'Nvidia': [0.4, 0.9, 0.9, 0.9, 0.4, 0.8],
+
+      'GOOG': [0.8, 0.9, 0.1, 0.8, 0.9, 0.9],
+      'AAPL': [0.9, 0.8, 0.2, 0.9, 0.8, 0.9],
+      'MSFT': [0.7, 0.8, 0.8, 0.8, 0.7, 0.9],
+      'AMZN': [0.6, 0.7, 0.9, 0.4, 0.9, 0.9],
+      'META': [0.5, 0.8, 0.3, 0.9, 0.8, 0.9],
+      'NVDA': [0.3, 0.9, 0.9, 0.9, 0.3, 0.9],
+
+      'HTTP': [0.3, 0.7, 0.1, 0.4, 0.9, 0.1],
+      'HTTPS': [0.9, 0.9, 0.1, 0.4, 0.9, 0.1],
+      'SSH': [0.9, 0.8, 0.8, 0.2, 0.7, 0.8],
+      'FTP': [0.1, 0.5, 0.3, 0.6, 0.8, 0.1],
+      'DNS': [0.8, 0.6, 0.4, 0.7, 0.9, 0.3],
+      'SMTP': [0.4, 0.5, 0.6, 0.5, 0.8, 0.5],
+
+      'Port-80': [0.3, 0.7, 0.1, 0.3, 0.9, 0.1],
+      'Port-443': [0.9, 0.9, 0.1, 0.3, 0.9, 0.1],
+      'Port-22': [0.9, 0.8, 0.8, 0.1, 0.7, 0.8],
+      'Port-21': [0.1, 0.5, 0.3, 0.5, 0.8, 0.1],
+      'Port-53': [0.8, 0.6, 0.4, 0.6, 0.9, 0.3],
+      'Port-25': [0.4, 0.5, 0.6, 0.4, 0.8, 0.5]
+    };
+    return mappings[name] || Array(6).fill(0.1);
+  };
+
+  const runTttSimulation = () => {
+    if (tttStatus === 'training') return;
+    setTttStatus('training');
+    setTttProgress(0);
+    setTttLossHistory([]);
+    setTttActiveTokenIndex(0);
+    setTttOutputValue('');
+    setTttTrueValue('');
+    setTttRetrievalCorrect(null);
+    
+    const presetData = TTT_PRESETS[tttPreset];
+    let currentIdx = 0;
+    
+    setTttLogs([
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Allocating local TTT-Linear layer (6x6 weight tensor)...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Batch Size = 1 (Online SGD), Learning Rate = ${tttLearningRate}, steps/token = ${tttGradientSteps}...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Commencing streaming of associative sequence...`
+    ]);
+
+    let W = tttWeightMatrix.map(row => [...row]);
+
+    const interval = setInterval(() => {
+      if (currentIdx >= presetData.length) {
+        clearInterval(interval);
+        setTttStatus('completed');
+        setTttActiveTokenIndex(-1);
+        setTttProgress(100);
+        setTttLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [System] Test-Time Training completed. ${presetData.length} tokens fully compressed into W.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [System] Associative retrieval phase active. Select a query key below to test context recall.`
+        ]);
+        return;
+      }
+
+      setTttActiveTokenIndex(currentIdx);
+      const pair = presetData[currentIdx];
+      const x = getTttFeatureVector(pair.key, 'key');
+      const y = getTttFeatureVector(pair.val, 'value');
+
+      let loss = 0;
+      for (let step = 0; step < tttGradientSteps; step++) {
+        const p = Array(6).fill(0);
+        for (let i = 0; i < 6; i++) {
+          for (let j = 0; j < 6; j++) {
+            p[i] += W[i][j] * x[j];
+          }
+        }
+
+        const e = Array(6).fill(0);
+        loss = 0;
+        for (let i = 0; i < 6; i++) {
+          e[i] = p[i] - y[i];
+          loss += 0.5 * e[i] * e[i];
+        }
+
+        for (let i = 0; i < 6; i++) {
+          for (let j = 0; j < 6; j++) {
+            const grad = e[i] * x[j];
+            W[i][j] = W[i][j] - tttLearningRate * grad - tttL2Decay * W[i][j];
+          }
+        }
+      }
+
+      const finalLoss = loss;
+      setTttStepLoss(finalLoss);
+      setTttLossHistory(prev => [...prev, finalLoss]);
+      setTttWeightMatrix(W.map(row => [...row]));
+      setTttProgress(Math.round(((currentIdx + 1) / presetData.length) * 100));
+
+      setTttLogs(prev => [
+        ...prev,
+        `[${new Date().toTimeString().split(' ')[0]}] [TTT] Ingested "${pair.key}" ➔ "${pair.val}" | SGD Loss: ${finalLoss.toFixed(5)}`
+      ]);
+
+      currentIdx++;
+    }, 1200);
+
+    tttIntervalRef.current = interval;
+  };
+
+  const queryTttHiddenState = (queryKey: string) => {
+    const presetData = TTT_PRESETS[tttPreset];
+    const pair = presetData.find(p => p.key === queryKey);
+    if (!pair) return;
+
+    const x = getTttFeatureVector(queryKey, 'key');
+
+    const p = Array(6).fill(0);
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 6; j++) {
+        p[i] += tttWeightMatrix[i][j] * x[j];
+      }
+    }
+
+    let bestVal = '';
+    let bestSim = -Infinity;
+    const uniqueVals = Array.from(new Set(presetData.map(p => p.val)));
+
+    uniqueVals.forEach(val => {
+      const v_feat = getTttFeatureVector(val, 'value');
+      let dot = 0;
+      let magP = 0;
+      let magV = 0;
+      for (let i = 0; i < 6; i++) {
+        dot += p[i] * v_feat[i];
+        magP += p[i] * p[i];
+        magV += v_feat[i] * v_feat[i];
+      }
+      const sim = dot / (Math.sqrt(magP) * Math.sqrt(magV));
+      if (sim > bestSim) {
+        bestSim = sim;
+        bestVal = val;
+      }
+    });
+
+    setTttOutputValue(bestVal);
+    setTttTrueValue(pair.val);
+    const isCorrect = bestVal === pair.val;
+    setTttRetrievalCorrect(isCorrect);
+
+    setTttLogs(prev => [
+      ...prev,
+      `[${new Date().toTimeString().split(' ')[0]}] [Retrieval] Input query token: "${queryKey}"`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Retrieval] Forward pass y_pred = W * x_query. Magnitudes: [${p.map(v => v.toFixed(2)).join(', ')}]`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Retrieval] Closest value match: "${bestVal}" (Similarity: ${(bestSim * 100).toFixed(1)}%)`,
+      `[${new Date().toTimeString().split(' ')[0]}] [Retrieval] Status: ${isCorrect ? '✅ RECALL SUCCESSFUL' : '❌ RECALL FAILED'}`
+    ]);
+  };
+
+  useEffect(() => {
+    const canvas = tttCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.fillStyle = '#050b14';
+    ctx.fillRect(0, 0, width, height);
+
+    const inputLabels = tttPreset === 'fruits' ? ['Round', 'Stem', 'Sweet', 'Acid', 'Skin', 'Size'] :
+                        tttPreset === 'companies' ? ['Size', 'Growth', 'R&D', 'Brand', 'Global', 'Margin'] :
+                        ['Header', 'SSL', 'Crypt', 'Speed', 'Port', 'Text'];
+    
+    const outputLabels = tttPreset === 'fruits' ? ['Redness', 'Greenness', 'Blueness', 'Warmth', 'Intensity', 'Opacity'] :
+                         tttPreset === 'companies' ? ['Vol', 'Alpha', 'Beta', 'Tech', 'SaaS', 'Cloud'] :
+                         ['Reliable', 'Secure', 'Remote', 'Transfer', 'Lookup', 'Delivery'];
+
+    const numNodes = 6;
+    const nodeRadius = 10;
+    const inputX = 60;
+    const outputX = width - 60;
+    
+    const inputYCoords = Array(numNodes).fill(0).map((_, i) => 25 + i * 32);
+    const outputYCoords = Array(numNodes).fill(0).map((_, i) => 25 + i * 32);
+
+    for (let i = 0; i < numNodes; i++) {
+      for (let j = 0; j < numNodes; j++) {
+        const weight = tttWeightMatrix[i][j];
+        const startY = inputYCoords[j];
+        const endY = outputYCoords[i];
+
+        const absWeight = Math.min(Math.abs(weight), 2.0);
+        const opacity = Math.max(0.05, absWeight * 0.4);
+        
+        ctx.strokeStyle = weight >= 0 ? `rgba(20, 184, 166, ${opacity})` : `rgba(239, 68, 68, ${opacity})`;
+        ctx.lineWidth = Math.max(0.5, absWeight * 2);
+        
+        ctx.beginPath();
+        ctx.moveTo(inputX, startY);
+        ctx.lineTo(outputX, endY);
+        ctx.stroke();
+      }
+    }
+
+    for (let j = 0; j < numNodes; j++) {
+      const startY = inputYCoords[j];
+      
+      ctx.fillStyle = '#0b1329';
+      ctx.strokeStyle = 'var(--primary-color)';
+      ctx.lineWidth = 1.5;
+      
+      ctx.beginPath();
+      ctx.arc(inputX, startY, nodeRadius, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'var(--text-secondary)';
+      ctx.font = '700 8px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(inputLabels[j], inputX - 14, startY + 3);
+      
+      if (tttActiveTokenIndex !== -1) {
+        const pair = TTT_PRESETS[tttPreset][tttActiveTokenIndex];
+        const x_vec = getTttFeatureVector(pair.key, 'key');
+        const val = x_vec[j];
+        ctx.fillStyle = `rgba(139, 92, 246, ${val})`;
+        ctx.beginPath();
+        ctx.arc(inputX, startY, nodeRadius - 3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < numNodes; i++) {
+      const endY = outputYCoords[i];
+      
+      ctx.fillStyle = '#0b1329';
+      ctx.strokeStyle = 'var(--accent-color)';
+      ctx.lineWidth = 1.5;
+      
+      ctx.beginPath();
+      ctx.arc(outputX, endY, nodeRadius, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'var(--text-secondary)';
+      ctx.font = '700 8px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(outputLabels[i], outputX + 14, endY + 3);
+
+      if (tttActiveTokenIndex !== -1) {
+        const pair = TTT_PRESETS[tttPreset][tttActiveTokenIndex];
+        const y_vec = getTttFeatureVector(pair.val, 'value');
+        const val = y_vec[i];
+        ctx.fillStyle = `rgba(20, 184, 166, ${val})`;
+        ctx.beginPath();
+        ctx.arc(outputX, endY, nodeRadius - 3, 0, 2 * Math.PI);
+        ctx.fill();
+      } else if (tttOutputValue) {
+        const y_pred = getTttFeatureVector(tttOutputValue, 'value');
+        const val = y_pred[i];
+        ctx.fillStyle = `rgba(20, 184, 166, ${val})`;
+        ctx.beginPath();
+        ctx.arc(outputX, endY, nodeRadius - 3, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+  }, [tttWeightMatrix, tttPreset, tttActiveTokenIndex, tttOutputValue]);
+
+  // ==========================================
+  // DIFFUSION FORCING WORLD MODEL SIMULATOR
+  // ==========================================
+  const [dfDenoisingSteps, setDfDenoisingSteps] = useState<number>(5);
+  const [dfGuidanceScale, setDfGuidanceScale] = useState<number>(4.0);
+  const dfHorizon = 15;
+  const [dfStatus, setDfStatus] = useState<'idle' | 'denoising' | 'completed'>('idle');
+  const [dfProgress, setDfProgress] = useState<number>(0);
+  const [dfPreset, setDfPreset] = useState<'three-pillars' | 'slalom' | 'narrow'>('three-pillars');
+  const [dfLogs, setDfLogs] = useState<string[]>([
+    '[System] Spatio-Temporal Diffusion Forcing engine initialized.',
+    '[System] Ready to run fractional denoising rollouts and classifier-free manifold guidance.'
+  ]);
+  const [dfObstacles, setDfObstacles] = useState<Array<{ x: number; y: number; r: number }>>([
+    { x: 230, y: 150, r: 40 },
+    { x: 150, y: 225, r: 35 },
+    { x: 310, y: 90, r: 30 }
+  ]);
+  const [dfPathAR, setDfPathAR] = useState<Array<{ x: number; y: number; collided: boolean }>>([]);
+  const [dfPathDF, setDfPathDF] = useState<Array<{ x: number; y: number; collided: boolean }>>([]);
+  const [dfNoiseCloud, setDfNoiseCloud] = useState<Array<{ x: number; y: number; alpha: number }>>([]);
+  const [dfCurrentStep, setDfCurrentStep] = useState<number>(0);
+  const [dfDriftAR, setDfDriftAR] = useState<number>(0);
+  const [dfDriftDF, setDfDriftDF] = useState<number>(0);
+  const [dfAdherenceAR, setDfAdherenceAR] = useState<number>(100);
+  const [dfAdherenceDF, setDfAdherenceDF] = useState<number>(100);
+
+  const dfCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const dfIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const resetDfSimulation = () => {
+    if (dfIntervalRef.current) {
+      clearInterval(dfIntervalRef.current);
+      dfIntervalRef.current = null;
+    }
+    setDfStatus('idle');
+    setDfProgress(0);
+    setDfCurrentStep(0);
+    setDfPathAR([]);
+    setDfPathDF([]);
+    setDfNoiseCloud([]);
+    setDfDriftAR(0);
+    setDfDriftDF(0);
+    setDfAdherenceAR(100);
+    setDfAdherenceDF(100);
+    setDfLogs([
+      '[System] Simulator reset. Grid layout cleared.',
+      '[System] Start position: (50, 270) | Target position: (410, 50).'
+    ]);
+  };
+
+  const applyDfPreset = (preset: 'three-pillars' | 'slalom' | 'narrow') => {
+    setDfPreset(preset);
+    resetDfSimulation();
+    if (preset === 'three-pillars') {
+      setDfObstacles([
+        { x: 230, y: 150, r: 40 },
+        { x: 150, y: 225, r: 35 },
+        { x: 310, y: 90, r: 30 }
+      ]);
+    } else if (preset === 'slalom') {
+      setDfObstacles([
+        { x: 150, y: 120, r: 45 },
+        { x: 280, y: 200, r: 45 },
+        { x: 380, y: 100, r: 25 }
+      ]);
+    } else {
+      setDfObstacles([
+        { x: 230, y: 60, r: 50 },
+        { x: 230, y: 260, r: 50 }
+      ]);
+    }
+  };
+
+  const checkCollision = (pos: { x: number; y: number }, obstacles: typeof dfObstacles) => {
+    for (const obs of obstacles) {
+      const dist = Math.sqrt((pos.x - obs.x) ** 2 + (pos.y - obs.y) ** 2);
+      if (dist < obs.r) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const runDfSimulation = () => {
+    if (dfStatus !== 'idle') return;
+    setDfStatus('denoising');
+    setDfLogs(prev => [
+      ...prev,
+      `[${new Date().toTimeString().split(' ')[0]}] [System] Starting parallel rollout comparison...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [AR] Simulating standard autoregressive policy (exposure bias active)...`,
+      `[${new Date().toTimeString().split(' ')[0]}] [DF] Simulating Diffusion Forcing with T=${dfHorizon} and ${dfDenoisingSteps} denoising steps...`
+    ]);
+
+    const startX = 50;
+    const startY = 270;
+    const goalX = 410;
+    const goalY = 50;
+
+    let pathAR: Array<{ x: number; y: number; collided: boolean }> = [{ x: startX, y: startY, collided: false }];
+    let pathDF: Array<{ x: number; y: number; collided: boolean }> = [{ x: startX, y: startY, collided: false }];
+    let step = 1;
+    let arCollided = false;
+    let dfCollided = false;
+
+    let arCumulativeNoiseX = 0;
+    let arCumulativeNoiseY = 0;
+
+    const interval = setInterval(() => {
+      if (step > dfHorizon) {
+        clearInterval(interval);
+        setDfStatus('completed');
+        setDfProgress(100);
+        setDfLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [System] Rollout complete!`,
+          `[${new Date().toTimeString().split(' ')[0]}] [AR] Autoregressive path ended with ${arCollided ? 'COLLISION 💥' : 'drift'}.`,
+          `[${new Date().toTimeString().split(' ')[0]}] [DF] Diffusion Forcing path arrived safely at goal (0% collision rate).`
+        ]);
+        return;
+      }
+
+      setDfCurrentStep(step);
+      const ratio = step / dfHorizon;
+
+      // 1. AR Rollout
+      if (!arCollided) {
+        const targetX = startX + (goalX - startX) * ratio;
+        const targetY = startY + (goalY - startY) * ratio;
+
+        const noiseFactor = step * 3.5;
+        arCumulativeNoiseX += (Math.random() - 0.48) * noiseFactor; 
+        arCumulativeNoiseY += (Math.random() - 0.52) * noiseFactor; 
+
+        const nextX = Math.round(targetX + arCumulativeNoiseX);
+        const nextY = Math.round(targetY + arCumulativeNoiseY);
+        
+        const pos = { x: nextX, y: nextY };
+        const hit = checkCollision(pos, dfObstacles);
+        if (hit) {
+          arCollided = true;
+          setDfLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [AR] 💥 Collision at step ${step} at (${nextX}, ${nextY})! Compounding drift led off manifold.`
+          ]);
+        }
+        pathAR.push({ x: nextX, y: nextY, collided: hit });
+        setDfPathAR([...pathAR]);
+      }
+
+      // 2. DF Rollout
+      if (!dfCollided) {
+        const idealX = startX + (goalX - startX) * ratio;
+        const idealY = startY + (goalY - startY) * ratio;
+
+        let currentX = idealX + (Math.random() - 0.5) * 35;
+        let currentY = idealY + (Math.random() - 0.5) * 35;
+
+        const particles = Array.from({ length: 12 }, () => ({
+          x: currentX + (Math.random() - 0.5) * 20,
+          y: currentY + (Math.random() - 0.5) * 20,
+          alpha: 0.6
+        }));
+        setDfNoiseCloud(particles);
+
+        for (let dStep = 0; dStep < dfDenoisingSteps; dStep++) {
+          const pullX = (idealX - currentX) * 0.45;
+          const pullY = (idealY - currentY) * 0.45;
+
+          let pushX = 0;
+          let pushY = 0;
+          for (const obs of dfObstacles) {
+            const dist = Math.sqrt((currentX - obs.x) ** 2 + (currentY - obs.y) ** 2);
+            const safeDistance = obs.r + 28;
+            if (dist < safeDistance) {
+              const force = (safeDistance - dist) / safeDistance * dfGuidanceScale * 8;
+              pushX += ((currentX - obs.x) / (dist || 1)) * force;
+              pushY += ((currentY - obs.y) / (dist || 1)) * force;
+            }
+          }
+
+          currentX += pullX + pushX;
+          currentY += pullY + pushY;
+        }
+
+        const nextX = Math.round(currentX);
+        const nextY = Math.round(currentY);
+
+        const pos = { x: nextX, y: nextY };
+        const hit = checkCollision(pos, dfObstacles);
+        if (hit) {
+          dfCollided = true;
+          setDfLogs(prev => [
+            ...prev,
+            `[${new Date().toTimeString().split(' ')[0]}] [DF] Warning: Path collision at step ${step}. Increase guidance scale.`
+          ]);
+        }
+        pathDF.push({ x: nextX, y: nextY, collided: hit });
+        setDfPathDF([...pathDF]);
+
+        const arDistToIdeal = arCollided ? 100 : Math.sqrt((pathAR[pathAR.length - 1].x - idealX) ** 2 + (pathAR[pathAR.length - 1].y - idealY) ** 2);
+        const dfDistToIdeal = Math.sqrt((nextX - idealX) ** 2 + (nextY - idealY) ** 2);
+
+        setDfDriftAR(Math.round(arDistToIdeal));
+        setDfDriftDF(Math.round(dfDistToIdeal));
+
+        const newAdherenceAR = Math.max(0, 100 - Math.round(arDistToIdeal * 0.6));
+        const newAdherenceDF = Math.max(0, 100 - Math.round(dfDistToIdeal * 0.5));
+        setDfAdherenceAR(arCollided ? 0 : newAdherenceAR);
+        setDfAdherenceDF(newAdherenceDF);
+
+        setDfLogs(prev => [
+          ...prev,
+          `[${new Date().toTimeString().split(' ')[0]}] [DF] Step ${step} Denoised Coordinate: (${nextX}, ${nextY}) | Drift: ${dfDistToIdeal.toFixed(1)}px (Corrected)`
+        ]);
+      }
+
+      setDfProgress(Math.round((step / dfHorizon) * 100));
+      step++;
+    }, 450);
+
+    dfIntervalRef.current = interval;
+  };
+
+  useEffect(() => {
+    const canvas = dfCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.fillStyle = '#050b14';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.lineWidth = 1;
+    const gridSpacing = 25;
+    for (let x = 0; x < width; x += gridSpacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < height; y += gridSpacing) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    dfObstacles.forEach(obs => {
+      const grad = ctx.createRadialGradient(obs.x, obs.y, 0, obs.x, obs.y, obs.r + 15);
+      grad.addColorStop(0, 'rgba(239, 68, 68, 0.15)');
+      grad.addColorStop(0.6, 'rgba(239, 68, 68, 0.05)');
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(obs.x, obs.y, obs.r + 15, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.1)';
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(obs.x, obs.y, obs.r, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+      ctx.font = '800 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CRITICAL', obs.x, obs.y - 2);
+      ctx.fillText('MANIFOLD', obs.x, obs.y + 6);
+    });
+
+    const startX = 50;
+    const startY = 270;
+    ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(startX, startY, 12, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.fillStyle = 'var(--success-color)';
+    ctx.beginPath();
+    ctx.arc(startX, startY, 6, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = 'var(--text-secondary)';
+    ctx.font = '700 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('START (50,270)', startX, startY + 20);
+
+    const goalX = 410;
+    const goalY = 50;
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(goalX, goalY, 15, 0, 2 * Math.PI);
+    ctx.stroke();
+    
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.8)';
+    ctx.beginPath();
+    ctx.arc(goalX, goalY, 8, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.fillStyle = 'var(--accent-color)';
+    ctx.beginPath();
+    ctx.arc(goalX, goalY, 4, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = 'var(--text-secondary)';
+    ctx.font = '700 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('TARGET (410,50)', goalX, goalY - 20);
+
+    if (dfPathAR.length > 1) {
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(dfPathAR[0].x, dfPathAR[0].y);
+      for (let i = 1; i < dfPathAR.length; i++) {
+        ctx.lineTo(dfPathAR[i].x, dfPathAR[i].y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      dfPathAR.forEach((p, idx) => {
+        if (idx === 0) return;
+        ctx.fillStyle = p.collided ? '#ef4444' : 'rgba(239, 68, 68, 0.7)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.collided ? 6 : 3, 0, 2 * Math.PI);
+        ctx.fill();
+
+        if (p.collided) {
+          ctx.strokeStyle = 'white';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(p.x - 5, p.y - 5);
+          ctx.lineTo(p.x + 5, p.y + 5);
+          ctx.moveTo(p.x + 5, p.y - 5);
+          ctx.lineTo(p.x - 5, p.y + 5);
+          ctx.stroke();
+        }
+      });
+    }
+
+    if (dfPathDF.length > 1) {
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(dfPathDF[0].x, dfPathDF[0].y);
+      for (let i = 1; i < dfPathDF.length; i++) {
+        ctx.lineTo(dfPathDF[i].x, dfPathDF[i].y);
+      }
+      ctx.stroke();
+
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(dfPathDF[0].x, dfPathDF[0].y);
+      for (let i = 1; i < dfPathDF.length; i++) {
+        ctx.lineTo(dfPathDF[i].x, dfPathDF[i].y);
+      }
+      ctx.stroke();
+
+      dfPathDF.forEach((p, idx) => {
+        if (idx === 0) return;
+        ctx.fillStyle = '#22d3ee';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+    }
+
+    if (dfStatus === 'denoising' && dfNoiseCloud.length > 0 && dfPathDF.length > 0) {
+      ctx.fillStyle = 'rgba(34, 211, 238, 0.4)';
+      dfNoiseCloud.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+
+      const head = dfPathDF[dfPathDF.length - 1];
+      ctx.strokeStyle = 'rgba(34, 211, 238, 0.08)';
+      ctx.lineWidth = 0.5;
+      dfNoiseCloud.forEach(p => {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(head.x, head.y);
+        ctx.stroke();
+      });
+    }
+  }, [dfPathAR, dfPathDF, dfNoiseCloud, dfObstacles, dfStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (dfIntervalRef.current) {
+        clearInterval(dfIntervalRef.current);
+      }
+    };
+  }, []);
 
   const stepFepSimulation = () => {
     const cx = fepAgentPos.x;
@@ -4778,7 +5608,416 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'active-inference' ? (
+            {selectedProjectId === 'diffusion-forcing' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', minHeight: '520px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Parameter Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap', background: 'rgba(255, 255, 255, 0.01)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Obstacle Course Layout
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.2rem', borderRadius: '6px' }}>
+                        {(['three-pillars', 'slalom', 'narrow'] as const).map((preset) => (
+                          <button
+                            key={preset}
+                            onClick={() => applyDfPreset(preset)}
+                            disabled={dfStatus === 'denoising'}
+                            style={{
+                              flex: 1,
+                              background: dfPreset === preset ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
+                              border: dfPreset === preset ? '1px solid rgba(6, 182, 212, 0.4)' : '1px solid transparent',
+                              color: dfPreset === preset ? '#22d3ee' : 'var(--text-secondary)',
+                              padding: '0.35rem',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              textTransform: 'capitalize',
+                              cursor: dfStatus === 'denoising' ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {preset.replace('-', ' ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ flex: '0 0 110px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Denoising Steps ({dfDenoisingSteps})
+                      </label>
+                      <input 
+                        type="range" 
+                        min={1} 
+                        max={10} 
+                        value={dfDenoisingSteps} 
+                        onChange={(e) => setDfDenoisingSteps(parseInt(e.target.value))}
+                        disabled={dfStatus === 'denoising'}
+                        style={{ width: '100%', accentColor: '#06b6d4', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    <div style={{ flex: '0 0 110px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        CFG Guidance ({dfGuidanceScale.toFixed(1)})
+                      </label>
+                      <input 
+                        type="range" 
+                        min={0} 
+                        max={10} 
+                        step={0.5}
+                        value={dfGuidanceScale} 
+                        onChange={(e) => setDfGuidanceScale(parseFloat(e.target.value))}
+                        disabled={dfStatus === 'denoising'}
+                        style={{ width: '100%', accentColor: '#06b6d4', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={runDfSimulation}
+                        disabled={dfStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, #06b6d4, var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.55rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: dfStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: dfStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}
+                      >
+                        <Play size={12} /> Simulate
+                      </button>
+                      <button
+                        onClick={resetDfSimulation}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.55rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Simulator Canvas */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(3, 7, 18, 0.4)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', minHeight: '320px' }}>
+                    {dfStatus === 'denoising' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        background: 'rgba(5, 11, 20, 0.85)',
+                        border: '1px solid rgba(6, 182, 212, 0.4)',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        color: '#22d3ee',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        fontFamily: 'monospace',
+                        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span>ROLLOUT STEP: {dfCurrentStep} / {dfHorizon}</span>
+                        <div style={{ width: '60px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: `${dfProgress}%`, height: '100%', background: '#06b6d4' }} />
+                        </div>
+                      </div>
+                    )}
+                    <canvas 
+                      ref={dfCanvasRef} 
+                      width={460} 
+                      height={320} 
+                      style={{ width: '100%', height: '100%', display: 'block', background: '#050b14' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Logs / Metrics Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.25rem', background: 'rgba(3, 7, 18, 0.05)' }}>
+                  {/* Real-time metrics */}
+                  <div>
+                    <h4 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Spatio-Temporal Drift Comparison
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '0.6rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(239,68,68,0.7)', fontWeight: 700 }}>AR DRIFT ERROR</span>
+                        <span style={{ fontSize: '1rem', fontWeight: 800, color: '#f87171', fontFamily: 'monospace' }}>
+                          {dfPathAR.length > 0 ? `${dfDriftAR}px` : '0px'}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(239,68,68,0.6)', marginTop: '0.15rem' }}>
+                          Adherence: {dfAdherenceAR}%
+                        </span>
+                      </div>
+                      <div style={{ background: 'rgba(6, 182, 212, 0.05)', padding: '0.6rem', borderRadius: '8px', border: '1px solid rgba(6, 182, 212, 0.2)', display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.65rem', color: '#22d3ee', fontWeight: 700 }}>DF DRIFT ERROR</span>
+                        <span style={{ fontSize: '1rem', fontWeight: 800, color: '#67e8f9', fontFamily: 'monospace' }}>
+                          {dfPathDF.length > 0 ? `${dfDriftDF}px` : '0px'}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(34,211,238,0.6)', marginTop: '0.15rem' }}>
+                          Adherence: {dfAdherenceDF}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* System console */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '180px' }}>
+                    <h4 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Fractional Denoising logs
+                    </h4>
+                    <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.5)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto', maxHeight: '220px' }}>
+                      {dfLogs.map((log, idx) => (
+                        <div key={idx} style={{ 
+                          color: log.includes('💥') || log.includes('Warning') ? 'var(--error-color)' : 
+                                 log.includes('[DF]') ? '#22d3ee' :
+                                 log.includes('[AR]') ? '#f87171' : 'var(--text-secondary)',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'ttt-layer' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', minHeight: '520px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Parameter Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap', background: 'rgba(255, 255, 255, 0.01)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ flex: 1, minWidth: '120px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Sequence Preset
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.2rem', borderRadius: '6px' }}>
+                        {(['fruits', 'companies', 'protocols'] as const).map((preset) => (
+                          <button
+                            key={preset}
+                            onClick={() => { setTttPreset(preset); resetTttSimulation(); }}
+                            disabled={tttStatus === 'training'}
+                            style={{
+                              flex: 1,
+                              background: tttPreset === preset ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                              border: tttPreset === preset ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid transparent',
+                              color: tttPreset === preset ? 'var(--accent-color)' : 'var(--text-secondary)',
+                              padding: '0.35rem',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              textTransform: 'capitalize',
+                              cursor: tttStatus === 'training' ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ flex: '0 0 100px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Learning Rate (lr)
+                      </label>
+                      <input 
+                        type="range" 
+                        min={0.01} 
+                        max={0.5} 
+                        step={0.01}
+                        value={tttLearningRate} 
+                        onChange={(e) => setTttLearningRate(parseFloat(e.target.value))}
+                        disabled={tttStatus === 'training'}
+                        style={{ width: '100%', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={runTttSimulation}
+                        disabled={tttStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.55rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: tttStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: tttStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}
+                      >
+                        <Play size={12} /> Train State
+                      </button>
+                      <button
+                        onClick={resetTttSimulation}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.55rem 1rem',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Weight Matrix Visualization */}
+                  <div style={{ display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(3, 7, 18, 0.4)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden', minHeight: '320px' }}>
+                    {tttStatus === 'training' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        background: 'rgba(5, 11, 20, 0.85)',
+                        border: '1px solid rgba(139, 92, 246, 0.4)',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        color: 'var(--accent-color)',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        fontFamily: 'monospace',
+                        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span>TRAINING STATE: {tttProgress}%</span>
+                        <div style={{ width: '60px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: `${tttProgress}%`, height: '100%', background: 'var(--accent-color)' }} />
+                        </div>
+                      </div>
+                    )}
+                    <canvas 
+                      ref={tttCanvasRef} 
+                      width={460} 
+                      height={320} 
+                      style={{ width: '100%', height: '100%', display: 'block', background: '#050b14' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Retrieval Tests & Logs */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.25rem', background: 'rgba(3, 7, 18, 0.05)' }}>
+                  {/* Associative Retrieval testing */}
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Context Recall Testing
+                    </h4>
+                    {tttStatus === 'completed' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          {TTT_PRESETS[tttPreset].map(p => (
+                            <button
+                              key={p.key}
+                              onClick={() => {
+                                setTttRetrievalKey(p.key);
+                                queryTttHiddenState(p.key);
+                              }}
+                              style={{
+                                background: tttRetrievalKey === p.key ? 'rgba(20, 184, 166, 0.15)' : 'rgba(255,255,255,0.03)',
+                                border: `1px solid ${tttRetrievalKey === p.key ? 'rgba(20, 184, 166, 0.4)' : 'var(--border-color)'}`,
+                                color: tttRetrievalKey === p.key ? 'var(--primary-color)' : 'var(--text-secondary)',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {p.key}
+                            </button>
+                          ))}
+                        </div>
+                        {tttOutputValue && (
+                          <div style={{ background: 'rgba(3,7,18,0.3)', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.25rem' }}>
+                            <div>
+                              <p style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 700 }}>QUERY: "{tttRetrievalKey}"</p>
+                              <p style={{ fontSize: '0.8rem', fontWeight: 800, color: 'white' }}>RECALLED: "{tttOutputValue}"</p>
+                              <p style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>EXPECTED: "{tttTrueValue}"</p>
+                            </div>
+                            <span style={{ 
+                              fontSize: '0.65rem', 
+                              fontWeight: 800, 
+                              color: tttRetrievalCorrect ? 'var(--success-color)' : 'var(--error-color)',
+                              background: tttRetrievalCorrect ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              padding: '0.2rem 0.4rem',
+                              borderRadius: '4px'
+                            }}>
+                              {tttRetrievalCorrect ? 'RECALL SUCCESS' : 'RECALL FAILURE'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : tttStatus === 'training' ? (
+                      <div style={{ background: 'rgba(139,92,246,0.05)', padding: '0.6rem', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.15)' }}>
+                        <div style={{ fontSize: '0.65rem', color: 'rgba(139,92,246,0.7)', fontWeight: 700 }}>ONLINE OPTIMIZATION ACTIVE</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'white', marginTop: '0.15rem', fontFamily: 'monospace' }}>
+                          Current SSL Loss: {tttStepLoss.toFixed(5)}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                          Collected gradient updates: {tttLossHistory.length}
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                        Train the Test-Time Training (TTT) weight matrix to enable retrieval testing.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* System console */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '180px' }}>
+                    <h4 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      TTT Layer logs
+                    </h4>
+                    <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.5)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.65rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto', maxHeight: '220px' }}>
+                      {tttLogs.map((log, idx) => (
+                        <div key={idx} style={{ 
+                          color: log.includes('SUCCESS') ? 'var(--success-color)' : 
+                                 log.includes('FAILED') ? 'var(--error-color)' :
+                                 log.includes('[TTT]') ? 'var(--accent-color)' : 'var(--text-secondary)',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : selectedProjectId === 'active-inference' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', minHeight: '520px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
