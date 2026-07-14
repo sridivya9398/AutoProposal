@@ -17,8 +17,32 @@ interface TechProject {
 
 const PROJECTS: TechProject[] = [
   {
+    id: 'moe-routing',
+    date: 'July 14, 2026 (Today)',
+    title: 'Sparse Mixture-of-Experts (MoE) Router',
+    tagline: 'Dynamic token routing, load balancing, and expert capacity bottleneck simulator',
+    impactScore: 9.9,
+    techStack: ['Mixture-of-Experts (MoE)', 'Sparse Routing (Top-k)', 'Token Capacity Factor', 'Auxiliary Balancing Loss', 'Expert Utilization', 'System Efficiency'],
+    problemSolved: 'Scaling dense LLMs quadratically increases computation costs. Sparse MoE activates only a subset of parameters (experts) per token, but naive routers cause expert collapse (routing all tokens to one expert) or exceed token capacity constraints, causing token drop and performance loss.',
+    impactDescription: 'Simulates dynamic token routing in a Sparse MoE (like DeepSeek-V3/Mixtral). Allows configuring the routing strategy (Top-1, Top-2), number of experts (8), capacity factor (multiplier for expert budget), and load balancing penalty. Visualizes the routing matrix, token-to-expert mapping, expert loading queues, token overflow drops, and the reduction in active parameter FLOPs.',
+    architecture: [
+      'Input Streaming ──> Input sequence tokens are parsed and mapped to feature embeddings',
+      'Gate Router ──> Compute routing logits: G(x) = Softmax(TopK(W_gate * x + Noise))',
+      'Load Balancing ──> Apply auxiliary loss penalty \\beta \\sum f_e P_e to balance expert loading',
+      'Capacity Check ──> Enforce capacity limits: C = (Tokens / Experts) * CapacityFactor',
+      'Expert Dispatch ──> Dispatch tokens to chosen experts; drop or overflow tokens exceeding capacity C',
+      'Parameter Scaling ──> Compute active parameter count (e.g. 16B active parameters out of 100B total)'
+    ],
+    metrics: {
+      'Active Parameters': '16.0B / 100.0B (16% active)',
+      'Routing Entropy': '2.85 bits (Perfect balance)',
+      'Token Overflow Rate': '0% (0 / 13 tokens)',
+      'Routing Latency': '4.2 ms'
+    }
+  },
+  {
     id: 'diffusion-forcing',
-    date: 'July 13, 2026 (Today)',
+    date: 'July 13, 2026',
     title: 'Diffusion Forcing World Model',
     tagline: 'Spatio-temporal fractional denoising and guidance simulator for error-free long-horizon agent planning',
     impactScore: 9.9,
@@ -796,7 +820,7 @@ const TTT_PRESETS = {
 };
 
 const InnovationSandbox = () => {
-  const [selectedProjectId, setSelectedProjectId] = useState('diffusion-forcing');
+  const [selectedProjectId, setSelectedProjectId] = useState('moe-routing');
   const selectedProject = PROJECTS.find(p => p.id === selectedProjectId) || PROJECTS[0];
 
   // Speculative Decoding States
@@ -2042,6 +2066,424 @@ We will leverage decentralized technologies to scale our application without add
       }
     }
   }, [tttWeightMatrix, tttPreset, tttActiveTokenIndex, tttOutputValue]);
+
+  // ==========================================
+  // MIXTURE OF EXPERTS (MOE) ROUTER SIMULATOR
+  // ==========================================
+  const [moeStatus, setMoeStatus] = useState<'idle' | 'routing' | 'completed'>('idle');
+  const [moeRoutingStrategy, setMoeRoutingStrategy] = useState<'top-1' | 'top-2'>('top-2');
+  const [moeCapacityFactor, setMoeCapacityFactor] = useState<number>(1.2);
+  const [moeBalancingPenalty, setMoeBalancingPenalty] = useState<number>(0.1);
+  const [moePreset, setMoePreset] = useState<'math-code' | 'creative' | 'compliance'>('math-code');
+  const [moeLogs, setMoeLogs] = useState<string[]>([
+    '[System] Mixture-of-Experts Sparse Routing engine initialized.',
+    '[System] Ready to stream tokens and evaluate dynamic expert allocation.'
+  ]);
+
+  const MOE_PROMPTS = {
+    'math-code': {
+      text: "Solve x^2 - 4 = 0 and write a Python script to verify it.",
+      tokens: ["Solve", "x^2", "-4", "=", "0", "and", "write", "a", "Python", "script", "to", "verify", "it"],
+      affinities: [
+        [0.1, 0.05, 0.6, 0.05, 0.05, 0.05, 0.05, 0.05],
+        [0.85, 0.02, 0.02, 0.01, 0.01, 0.01, 0.06, 0.02],
+        [0.8, 0.01, 0.02, 0.01, 0.01, 0.01, 0.1, 0.04],
+        [0.75, 0.05, 0.05, 0.02, 0.02, 0.01, 0.05, 0.05],
+        [0.8, 0.01, 0.02, 0.01, 0.01, 0.01, 0.1, 0.04],
+        [0.05, 0.05, 0.7, 0.05, 0.05, 0.02, 0.03, 0.05],
+        [0.1, 0.6, 0.15, 0.03, 0.05, 0.02, 0.02, 0.03],
+        [0.02, 0.02, 0.8, 0.05, 0.05, 0.01, 0.02, 0.03],
+        [0.01, 0.9, 0.02, 0.01, 0.01, 0.01, 0.01, 0.03],
+        [0.01, 0.92, 0.01, 0.01, 0.01, 0.01, 0.01, 0.02],
+        [0.02, 0.05, 0.75, 0.05, 0.05, 0.01, 0.02, 0.05],
+        [0.2, 0.5, 0.1, 0.02, 0.02, 0.05, 0.06, 0.05],
+        [0.02, 0.02, 0.82, 0.02, 0.02, 0.02, 0.03, 0.05]
+      ]
+    },
+    'creative': {
+      text: "Write a short poem about a server running out of memory in Spanish.",
+      tokens: ["Write", "a", "short", "poem", "about", "a", "server", "running", "out", "of", "memory", "in", "Spanish"],
+      affinities: [
+        [0.05, 0.05, 0.5, 0.05, 0.25, 0.02, 0.03, 0.05],
+        [0.02, 0.02, 0.8, 0.05, 0.05, 0.01, 0.02, 0.03],
+        [0.02, 0.02, 0.7, 0.05, 0.15, 0.01, 0.02, 0.03],
+        [0.01, 0.01, 0.1, 0.01, 0.82, 0.01, 0.01, 0.03],
+        [0.02, 0.02, 0.8, 0.02, 0.1, 0.01, 0.01, 0.02],
+        [0.02, 0.02, 0.8, 0.05, 0.05, 0.01, 0.02, 0.03],
+        [0.05, 0.45, 0.2, 0.05, 0.05, 0.05, 0.1, 0.05],
+        [0.02, 0.15, 0.6, 0.05, 0.1, 0.02, 0.02, 0.04],
+        [0.02, 0.02, 0.8, 0.05, 0.05, 0.01, 0.02, 0.03],
+        [0.02, 0.02, 0.8, 0.05, 0.05, 0.01, 0.02, 0.03],
+        [0.05, 0.1, 0.15, 0.02, 0.05, 0.01, 0.6, 0.02],
+        [0.02, 0.02, 0.6, 0.25, 0.05, 0.01, 0.01, 0.04],
+        [0.01, 0.01, 0.05, 0.88, 0.02, 0.01, 0.01, 0.01]
+      ]
+    },
+    'compliance': {
+      text: "Translate GDPR privacy policy to Japanese and check security risks.",
+      tokens: ["Translate", "GDPR", "privacy", "policy", "to", "Japanese", "and", "check", "security", "risks"],
+      affinities: [
+        [0.01, 0.01, 0.05, 0.88, 0.02, 0.01, 0.01, 0.01],
+        [0.02, 0.02, 0.1, 0.02, 0.02, 0.76, 0.03, 0.03],
+        [0.01, 0.01, 0.15, 0.01, 0.02, 0.74, 0.02, 0.04],
+        [0.02, 0.02, 0.45, 0.02, 0.02, 0.4, 0.02, 0.05],
+        [0.02, 0.02, 0.8, 0.05, 0.05, 0.01, 0.02, 0.03],
+        [0.01, 0.01, 0.05, 0.88, 0.02, 0.01, 0.01, 0.01],
+        [0.02, 0.02, 0.8, 0.05, 0.05, 0.01, 0.02, 0.03],
+        [0.05, 0.05, 0.6, 0.02, 0.02, 0.2, 0.02, 0.04],
+        [0.01, 0.02, 0.05, 0.02, 0.01, 0.82, 0.01, 0.06],
+        [0.02, 0.02, 0.2, 0.02, 0.02, 0.65, 0.05, 0.04]
+      ]
+    }
+  };
+
+  const MOE_EXPERTS = [
+    { name: 'Expert 1: Math & Logic', color: '#06b6d4', id: 0, desc: 'Math syntax, logical rules' },
+    { name: 'Expert 2: Code & Syntax', color: '#10b981', id: 1, desc: 'Coding keywords, syntax trees' },
+    { name: 'Expert 3: Natural Language', color: '#f59e0b', id: 2, desc: 'Grammar, sentence structures' },
+    { name: 'Expert 4: Translation', color: '#f97316', id: 3, desc: 'Multilingual mapping' },
+    { name: 'Expert 5: Creative Writing', color: '#ec4899', id: 4, desc: 'Creative prose, poetry' },
+    { name: 'Expert 6: Security & Compliance', color: '#ef4444', id: 5, desc: 'GDPR, security, restrictions' },
+    { name: 'Expert 7: Science & Reasoning', color: '#a855f7', id: 6, desc: 'Scientific concepts, reasoning' },
+    { name: 'Expert 8: System & Safety', color: '#3b82f6', id: 7, desc: 'Guardrails, system directives' }
+  ];
+
+  const [moeActiveTokenIdx, setMoeActiveTokenIdx] = useState<number>(-1);
+  const [moeTokenStates, setMoeTokenStates] = useState<Array<{
+    token: string;
+    routedTo: number[];
+    scores: number[];
+    status: 'pending' | 'routed' | 'overflowed';
+  }>>([]);
+  const [moeExpertLoads, setMoeExpertLoads] = useState<number[]>(new Array(8).fill(0));
+  const [moeExpertQueues, setMoeExpertQueues] = useState<string[][]>(Array.from({ length: 8 }, () => []));
+
+  const moeCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const moeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const activePromptData = MOE_PROMPTS[moePreset];
+  const numTokens = activePromptData.tokens.length;
+  const capacityLimit = Math.max(1, Math.ceil((numTokens / 8) * moeCapacityFactor));
+
+  const resetMoeSimulation = () => {
+    if (moeIntervalRef.current) {
+      clearInterval(moeIntervalRef.current);
+      moeIntervalRef.current = null;
+    }
+    setMoeStatus('idle');
+    setMoeActiveTokenIdx(-1);
+    setMoeTokenStates(activePromptData.tokens.map(t => ({
+      token: t,
+      routedTo: [],
+      scores: [],
+      status: 'pending'
+    })));
+    setMoeExpertLoads(new Array(8).fill(0));
+    setMoeExpertQueues(Array.from({ length: 8 }, () => []));
+    setMoeLogs([
+      '[System] Simulator reset.',
+      `[System] Target Capacity per expert: ${capacityLimit} tokens (Capacity Factor: ${moeCapacityFactor.toFixed(1)}x).`,
+      `[System] Loaded prompt: "${activePromptData.text}"`
+    ]);
+  };
+
+  useEffect(() => {
+    resetMoeSimulation();
+  }, [moePreset, moeCapacityFactor]);
+
+  const runMoeSimulation = () => {
+    if (moeStatus !== 'idle') return;
+    setMoeStatus('routing');
+    setMoeActiveTokenIdx(0);
+    setMoeLogs(prev => [
+      ...prev,
+      `[Router] Beginning MoE dispatch for ${numTokens} tokens using ${moeRoutingStrategy.toUpperCase()} routing...`
+    ]);
+
+    let tokenIdx = 0;
+    const localExpertLoads = new Array(8).fill(0);
+    const localExpertQueues = Array.from({ length: 8 }, () => [] as string[]);
+    const localTokenStates = activePromptData.tokens.map(t => ({
+      token: t,
+      routedTo: [] as number[],
+      scores: [] as number[],
+      status: 'pending' as 'pending' | 'routed' | 'overflowed'
+    }));
+
+    moeIntervalRef.current = setInterval(() => {
+      if (tokenIdx >= numTokens) {
+        clearInterval(moeIntervalRef.current!);
+        moeIntervalRef.current = null;
+        setMoeStatus('completed');
+        setMoeLogs(prev => [...prev, '[System] MoE dispatch simulation completed successfully. 🚀']);
+        return;
+      }
+
+      const currentToken = activePromptData.tokens[tokenIdx];
+      const rawAffinities = activePromptData.affinities[tokenIdx];
+
+      const penalizedAffinities = rawAffinities.map((aff, expId) => {
+        return Math.max(0.01, aff - moeBalancingPenalty * (localExpertLoads[expId] / capacityLimit));
+      });
+
+      const sumPenalized = penalizedAffinities.reduce((a, b) => a + b, 0);
+      const probabilities = penalizedAffinities.map(p => p / sumPenalized);
+
+      const indexedProbs = probabilities.map((p, idx) => ({ prob: p, idx }));
+      indexedProbs.sort((a, b) => b.prob - a.prob);
+
+      const k = moeRoutingStrategy === 'top-1' ? 1 : 2;
+      const selected = indexedProbs.slice(0, k);
+
+      const routedToIds: number[] = [];
+      const routedScores: number[] = [];
+      let isOverflow = false;
+
+      selected.forEach(sel => {
+        routedToIds.push(sel.idx);
+        routedScores.push(sel.prob);
+
+        if (localExpertLoads[sel.idx] < capacityLimit) {
+          localExpertLoads[sel.idx] += 1;
+          localExpertQueues[sel.idx].push(currentToken);
+        } else {
+          isOverflow = true;
+        }
+      });
+
+      localTokenStates[tokenIdx] = {
+        token: currentToken,
+        routedTo: routedToIds,
+        scores: routedScores,
+        status: isOverflow ? 'overflowed' : 'routed'
+      };
+
+      setMoeActiveTokenIdx(tokenIdx);
+      setMoeTokenStates([...localTokenStates]);
+      setMoeExpertLoads([...localExpertLoads]);
+      setMoeExpertQueues([...localExpertQueues]);
+
+      const logStr = isOverflow
+        ? `[Warning] Token '${currentToken}' routed to Expert(s) [${routedToIds.map(id => MOE_EXPERTS[id].name.split(':')[0]).join(', ')}] but capacity of ${capacityLimit} was EXCEEDED! Token dropped.`
+        : `[Router] Token '${currentToken}' routed to Expert(s) [${routedToIds.map(id => `${MOE_EXPERTS[id].name.split(':')[0]} (${Math.round(probabilities[id]*100)}%)`).join(', ')}]`;
+
+      setMoeLogs(prev => [...prev, logStr]);
+
+      tokenIdx++;
+    }, 800);
+  };
+
+  useEffect(() => {
+    const canvas = moeCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.fillStyle = '#050b14';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < width; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < height; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    const gateX = 170;
+    const gateY = height / 2;
+    const gateRadius = 24;
+
+    const tokenStartX = 30;
+    const tokenSpacingY = 24;
+
+    const tokens = activePromptData.tokens;
+    tokens.forEach((tok, idx) => {
+      const tokY = 30 + idx * tokenSpacingY;
+      const isCurrent = idx === moeActiveTokenIdx;
+      const isPast = idx < moeActiveTokenIdx;
+
+      if (isCurrent || isPast) {
+        ctx.beginPath();
+        ctx.moveTo(95, tokY);
+        ctx.bezierCurveTo(120, tokY, 130, gateY, gateX - gateRadius, gateY);
+        ctx.strokeStyle = isCurrent 
+          ? 'rgba(99, 102, 241, 0.8)' 
+          : 'rgba(99, 102, 241, 0.15)';
+        ctx.lineWidth = isCurrent ? 2 : 1;
+        ctx.stroke();
+
+        if (isCurrent && moeStatus === 'routing') {
+          const now = Date.now();
+          const t = (now % 800) / 800;
+          const dotX = (1 - t) * 95 + t * (gateX - gateRadius);
+          const dotY = (1 - t) * tokY + t * gateY;
+          ctx.fillStyle = '#818cf8';
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, 4, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+
+      const tState = moeTokenStates[idx];
+      let bubbleBg = 'rgba(255, 255, 255, 0.03)';
+      let borderCol = 'rgba(255, 255, 255, 0.1)';
+      let textCol = 'var(--text-secondary)';
+
+      if (isCurrent) {
+        bubbleBg = 'rgba(99, 102, 241, 0.25)';
+        borderCol = 'rgba(99, 102, 241, 0.8)';
+        textCol = '#a5b4fc';
+      } else if (isPast) {
+        if (tState?.status === 'overflowed') {
+          bubbleBg = 'rgba(239, 68, 68, 0.15)';
+          borderCol = 'rgba(239, 68, 68, 0.4)';
+          textCol = '#f87171';
+        } else {
+          bubbleBg = 'rgba(16, 185, 129, 0.1)';
+          borderCol = 'rgba(16, 185, 129, 0.3)';
+          textCol = '#34d399';
+        }
+      }
+
+      ctx.fillStyle = bubbleBg;
+      ctx.strokeStyle = borderCol;
+      ctx.lineWidth = 1;
+      
+      const textWidth = ctx.measureText(tok).width;
+      const bW = Math.max(55, textWidth + 14);
+      const bH = 18;
+      const bX = tokenStartX;
+      const bY = tokY - bH / 2;
+
+      ctx.beginPath();
+      ctx.roundRect?.(bX, bY, bW, bH, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = textCol;
+      ctx.font = isCurrent ? '800 10px monospace' : '500 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(tok, bX + bW / 2, bY + bH / 2 + 3.5);
+
+      if (tState?.status === 'overflowed') {
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '800 8px sans-serif';
+        ctx.fillText('✕ DROP', bX + bW + 20, tokY + 3);
+      }
+    });
+
+    const routerGrad = ctx.createRadialGradient(gateX, gateY, 0, gateX, gateY, gateRadius + 10);
+    routerGrad.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
+    routerGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = routerGrad;
+    ctx.beginPath();
+    ctx.arc(gateX, gateY, gateRadius + 10, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(9, 9, 11, 0.8)';
+    ctx.strokeStyle = moeStatus === 'routing' ? 'var(--accent-color)' : 'rgba(99, 102, 241, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(gateX, gateY, gateRadius, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '800 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GATE', gateX, gateY - 3);
+    ctx.fillText('ROUTER', gateX, gateY + 7);
+
+    const expertStartX = 340;
+    const expertSpacingY = 40;
+    const expertWidth = 135;
+    const expertHeight = 30;
+
+    MOE_EXPERTS.forEach((exp, idx) => {
+      const expY = 25 + idx * expertSpacingY;
+      const isTarget = moeActiveTokenIdx !== -1 && 
+        moeTokenStates[moeActiveTokenIdx]?.routedTo.includes(idx);
+      
+      const load = moeExpertLoads[idx];
+      const isOverloaded = load >= capacityLimit;
+
+      if (isTarget) {
+        ctx.beginPath();
+        ctx.moveTo(gateX + gateRadius, gateY);
+        ctx.bezierCurveTo(gateX + 60, gateY, expertStartX - 30, expY + expertHeight/2, expertStartX, expY + expertHeight/2);
+        
+        ctx.strokeStyle = exp.color;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        const now = Date.now();
+        const t = (now % 800) / 800;
+        const dotX = (1 - t) * (gateX + gateRadius) + t * expertStartX;
+        const dotY = (1 - t) * gateY + t * (expY + expertHeight/2);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = isTarget ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.01)';
+      ctx.strokeStyle = isTarget ? exp.color : 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = isTarget ? 1.5 : 1;
+
+      ctx.beginPath();
+      ctx.roundRect?.(expertStartX, expY, expertWidth, expertHeight, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = exp.color;
+      ctx.font = '800 9px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(exp.name.split(':')[0], expertStartX + 8, expY + 12);
+
+      ctx.fillStyle = 'var(--text-secondary)';
+      ctx.font = '600 7px sans-serif';
+      const queueList = moeExpertQueues[idx];
+      const queueStr = queueList.length > 0 ? `Q: [${queueList.slice(-2).join(',')}]` : exp.desc;
+      ctx.fillText(queueStr, expertStartX + 8, expY + 22);
+
+      const loadPercentage = Math.min(1, load / capacityLimit);
+      const barW = 32;
+      const barH = 5;
+      const barX = expertStartX + expertWidth - barW - 8;
+      const barY = expY + expertHeight/2 - barH/2 + 3;
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fillRect(barX, barY, barW, barH);
+
+      ctx.fillStyle = isOverloaded ? '#ef4444' : loadPercentage > 0.7 ? '#f59e0b' : exp.color;
+      ctx.fillRect(barX, barY, barW * loadPercentage, barH);
+
+      ctx.fillStyle = isOverloaded ? '#ef4444' : 'var(--text-secondary)';
+      ctx.font = '700 8px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${load}/${capacityLimit}`, barX + barW, expY + 11);
+    });
+
+  }, [moeActiveTokenIdx, moeTokenStates, moeExpertLoads, moePreset, moeCapacityFactor, moeRoutingStrategy, moeStatus, moeExpertQueues]);
+
+  useEffect(() => {
+    return () => {
+      if (moeIntervalRef.current) {
+        clearInterval(moeIntervalRef.current);
+      }
+    };
+  }, []);
 
   // ==========================================
   // DIFFUSION FORCING WORLD MODEL SIMULATOR
@@ -5608,7 +6050,219 @@ We will leverage decentralized technologies to scale our application without add
             </div>
 
             {/* Sandbox Playground Area */}
-            {selectedProjectId === 'diffusion-forcing' ? (
+            {selectedProjectId === 'moe-routing' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', minHeight: '520px' }}>
+                {/* Simulator Column */}
+                <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
+                  
+                  {/* Parameter Controls */}
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap', background: 'rgba(255, 255, 255, 0.01)', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ flex: 1, minWidth: '150px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Input Prompt / Preset
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.2rem', borderRadius: '6px' }}>
+                        {(['math-code', 'creative', 'compliance'] as const).map((preset) => (
+                          <button
+                            key={preset}
+                            onClick={() => setMoePreset(preset)}
+                            disabled={moeStatus === 'routing'}
+                            style={{
+                              flex: 1,
+                              background: moePreset === preset ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                              border: moePreset === preset ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid transparent',
+                              color: moePreset === preset ? '#a5b4fc' : 'var(--text-secondary)',
+                              padding: '0.35rem',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              textTransform: 'capitalize',
+                              cursor: moeStatus === 'routing' ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {preset.replace('-', ' & ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ flex: '0 0 110px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Routing strategy
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', padding: '0.2rem', borderRadius: '6px' }}>
+                        {(['top-1', 'top-2'] as const).map((strat) => (
+                          <button
+                            key={strat}
+                            onClick={() => setMoeRoutingStrategy(strat)}
+                            disabled={moeStatus === 'routing'}
+                            style={{
+                              flex: 1,
+                              background: moeRoutingStrategy === strat ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                              border: moeRoutingStrategy === strat ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid transparent',
+                              color: moeRoutingStrategy === strat ? '#34d399' : 'var(--text-secondary)',
+                              padding: '0.35rem',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              textTransform: 'uppercase',
+                              cursor: moeStatus === 'routing' ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {strat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ flex: '0 0 110px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Capacity Factor ({moeCapacityFactor.toFixed(1)}x)
+                      </label>
+                      <input 
+                        type="range" 
+                        min={0.5} 
+                        max={2.5} 
+                        step={0.1}
+                        value={moeCapacityFactor} 
+                        onChange={(e) => setMoeCapacityFactor(parseFloat(e.target.value))}
+                        disabled={moeStatus === 'routing'}
+                        style={{ width: '100%', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    <div style={{ flex: '0 0 110px' }}>
+                      <label style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem', display: 'block' }}>
+                        Balancing Beta ({moeBalancingPenalty.toFixed(2)})
+                      </label>
+                      <input 
+                        type="range" 
+                        min={0.0} 
+                        max={1.0} 
+                        step={0.05}
+                        value={moeBalancingPenalty} 
+                        onChange={(e) => setMoeBalancingPenalty(parseFloat(e.target.value))}
+                        disabled={moeStatus === 'routing'}
+                        style={{ width: '100%', accentColor: 'var(--accent-color)', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={runMoeSimulation}
+                        disabled={moeStatus !== 'idle'}
+                        style={{
+                          background: 'linear-gradient(135deg, var(--accent-color), var(--primary-color))',
+                          border: 'none',
+                          color: 'white',
+                          padding: '0.5rem 0.85rem',
+                          borderRadius: '6px',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: moeStatus !== 'idle' ? 'not-allowed' : 'pointer',
+                          opacity: moeStatus !== 'idle' ? 0.6 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          height: '32px'
+                        }}
+                      >
+                        <Play size={12} /> Route
+                      </button>
+                      <button
+                        onClick={resetMoeSimulation}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid var(--border-color)',
+                          color: 'white',
+                          padding: '0.5rem 0.85rem',
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          height: '32px'
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Canvas Visualization */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', minHeight: '340px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', background: 'rgba(3, 7, 18, 0.4)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                      <canvas 
+                        ref={moeCanvasRef} 
+                        width={500} 
+                        height={340} 
+                        style={{ width: '100%', height: '100%', display: 'block', background: '#050b14' }}
+                      />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Logs Column */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.25rem', background: 'rgba(3, 7, 18, 0.05)' }}>
+                  
+                  {/* Telemetry Indicator */}
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Gating & Parameters Telemetry
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(3, 7, 18, 0.3)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Active Parameters:</span>
+                        <span style={{ fontWeight: 700, color: 'var(--accent-color)' }}>
+                          {moeRoutingStrategy === 'top-1' ? '16.0B / 100.0B (16% active)' : '28.0B / 100.0B (28% active)'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Capacity Budget / Exp:</span>
+                        <span style={{ fontWeight: 700 }}>
+                          {capacityLimit} tokens
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Total Tokens Dispatched:</span>
+                        <span style={{ fontWeight: 700 }}>
+                          {moeActiveTokenIdx + 1 > 0 ? `${moeActiveTokenIdx + 1} / ${numTokens}` : '0'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Token Overflow drops:</span>
+                        <span style={{ fontWeight: 700, color: moeTokenStates.some(s => s.status === 'overflowed') ? 'var(--error-color)' : 'var(--success-color)' }}>
+                          {moeTokenStates.filter(s => s.status === 'overflowed').length} tokens
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* System Console */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '220px' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                      Router Event Log
+                    </h4>
+                    <div style={{ flex: 1, background: 'rgba(3, 7, 18, 0.5)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto', maxHeight: '240px' }}>
+                      {moeLogs.map((log, idx) => (
+                        <div key={idx} style={{ 
+                          color: log.includes('[Warning]') ? 'var(--error-color)' : 
+                                 log.includes('[Router]') ? 'var(--accent-color)' :
+                                 log.includes('[System]') ? 'var(--success-color)' : 'var(--text-secondary)',
+                          lineHeight: '1.4',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            ) : selectedProjectId === 'diffusion-forcing' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', minHeight: '520px' }}>
                 {/* Simulator Column */}
                 <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'rgba(3, 7, 18, 0.2)', padding: '1.25rem', gap: '1.25rem' }}>
